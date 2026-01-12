@@ -55,7 +55,9 @@ Build times on modern x86_64 systems are significantly shorter.
 ## Usage
 
 ```sh
-chmod +x build-arm-linux-musleabi.sh
+cd
+git clone https://github.com/solartracker/cross-arm-linux-musleabi
+cd cross-arm-linux-musleabi
 ./build-arm-linux-musleabi.sh
 ```
 
@@ -64,13 +66,13 @@ The script is restartable and skips completed stages on reruns.
 Toolchain output:
 
 ```sh
-build-arm-linux-musleabi.sh-build/bin/
+$HOME/cross-arm-linux-musleabi-build/bin/
 ```
 
 Add to PATH:
 
 ```sh
-export PATH="$PWD/build-arm-linux-musleabi.sh-build/bin:$PATH"
+export PATH="$HOME/cross-arm-linux-musleabi-build/bin:$PATH"
 ```
 
 ## Testing the Toolchain
