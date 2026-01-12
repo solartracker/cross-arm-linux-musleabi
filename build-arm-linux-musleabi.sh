@@ -503,6 +503,130 @@ finalize_build() {
 }
 
 ################################################################################
+# Host dependencies
+
+BUILD_RC="${HOME}/.cross-buildrc"
+
+load_install_pref() {
+    INSTALL_DEPS="ask"
+    [ -f "$BUILD_RC" ] && . "$BUILD_RC"
+    return 0
+}
+
+save_install_pref() {
+    echo "INSTALL_DEPS=$INSTALL_DEPS" > "$BUILD_RC"
+    return 0
+}
+
+prompt_install_choice() {
+    echo
+    echo "Host dependencies are missing or outdated."
+    echo "Choose an action:"
+    echo "  [y] Install now"
+    echo "  [a] Always install automatically"
+    echo "  [n] Do not install (abort build)"
+    echo
+
+    read -r -p "Selection [y/a/n]: " choice
+
+    case "$choice" in
+        y|Y)
+            return 0
+            ;;
+        a|A)
+            INSTALL_DEPS="yes"
+            save_install_pref
+            return 0
+            ;;
+        n|N)
+            INSTALL_DEPS="no"
+            #save_install_pref
+            return 1
+            ;;
+        *)
+            echo "Invalid selection."
+            return 1
+            ;;
+    esac
+    return 0
+}
+
+install_dependencies() {
+    load_install_pref
+
+    # list each package and optional version
+    # example: "build-essential 12.9"
+    local dependencies=(
+        "build-essential"
+        "binutils"
+        "bison"
+        "flex"
+        "texinfo"
+        "gawk"
+        "perl"
+        "patch"
+        "file"
+        "wget"
+        "curl"
+        "git"
+        "libgmp-dev"
+        "libmpfr-dev"
+        "libmpc-dev"
+        "libisl-dev"
+        "zlib1g-dev"
+    )
+    local to_install=()
+
+    echo "[*] Checking dependencies..."
+    for entry in "${dependencies[@]}"; do
+        local pkg min_version installed_version
+        read -r pkg min_version <<< "$entry"
+
+        if installed_version="$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null)"; then
+            if [ -n "$min_version" ]; then
+                if dpkg --compare-versions "$installed_version" ge "$min_version"; then
+                    echo "[*] $pkg $installed_version is OK."
+                else
+                    echo "[*] $pkg $installed_version is too old (min $min_version)."
+                    to_install+=("$pkg")
+                fi
+            else
+                echo "[*] $pkg is installed."
+            fi
+        else
+            echo "[*] $pkg not installed."
+            to_install+=("$pkg")
+        fi
+    done
+
+    if [ "${#to_install[@]}" -eq 0 ]; then
+        echo "[*] All dependencies satisfied."
+        return 0
+    fi
+
+    case "$INSTALL_DEPS" in
+        yes)
+            ;;
+        no)
+            echo "[!] Missing dependencies and auto-install disabled."
+            return 1
+            ;;
+        ask)
+            if ! prompt_install_choice; then
+                return 1
+            fi
+            ;;
+    esac
+
+    echo "[*] Installing dependencies: ${to_install[*]}"
+    sudo apt-get update
+    sudo apt-get install -y "${to_install[@]}"
+
+    return 0
+}
+
+
+################################################################################
 # General
 
 CROSSBUILD_DIR="${SCRIPT_DIR}-build"
@@ -536,7 +660,13 @@ SYSROOT="${PREFIX}/${TARGET}"
 #    sudo ln -sfn "${CROSSBUILD_DIR}" "${TOPDIR}"
 #fi
 
-
+set +x
+install_dependencies
+echo "[*] Starting ARM cross-compiler build..."
+echo ""
+echo ""
+set -x
+#exit 1
 
 
 ################################################################################
