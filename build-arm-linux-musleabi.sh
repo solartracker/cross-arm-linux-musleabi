@@ -748,10 +748,11 @@ fi
 # Interpreter path for running dynamically-linked executables on this device.
 #
 # Normally, cross-compiled programs do not run on the host, but the Raspberry Pi
-# is backwards compatible with ARMv7 soft-float. However, this will not work
-# on x86_64 hosts.
+# is backwards compatible with ARMv7 soft-float programs.  The actual target
+# devices are things like home routers, smart tv's, smart phone, etc.
 #
-# If you only need statically-linked executables, then you don't need to do this.
+# If you only create statically-linked executables, then you don't need to do
+# this.
 # 
 if [ ! -f "/lib/ld-musl-arm.so.1" ]; then
     sudo ln -sfn "${SYSROOT}/lib/libc.so" "/lib/ld-musl-arm.so.1"
