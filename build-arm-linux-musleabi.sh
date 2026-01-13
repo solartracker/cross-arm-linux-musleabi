@@ -227,7 +227,7 @@ clone_github()
             #chmod -R g-w,o-w "${temp_dir}/${source_subdir}"
             tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" \
                 -C "${temp_dir}" "${source_subdir}" \
-                -cv | xz -zc -7e >"${cached_path}"
+                -cv | xz -zc -7e -T0 >"${cached_path}"
             touch -d "${timestamp}" "${cached_path}"
             rm -rf "${temp_dir}"
             trap - EXIT INT TERM
@@ -450,35 +450,50 @@ archive_build_directory()
     local repo_version=""
     local timestamp=""
     local repo_filename=""
+    local repo_status=""
+    local repo_modified=""
+    local repo_dirty=""
     local cached_path=""
 
     cd "${repo_dir}"
     git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 1
+    repo_status="$(git status --porcelain)"
+    repo_dirty="$([ -n "${repo_status}" ] && echo yes || echo no)"
+    [ -n "${repo_status}" ] && repo_modified="+modified"
+    [ -z "${repo_status}" ] && repo_status="(no differences or untracked files)"
     repo_version="$(git rev-parse HEAD)"
     timestamp="$(git log -1 --format='@%ct')"
     timestamp_utc="$(date -u -d "${timestamp}" '+%Y%m%d+%H%M%S')"
+    timestamp_local="$(date -d "${timestamp}" '+%Y-%m-%d %H:%M:%S %Z %z')"
 
-    if [ -n "$(git status --porcelain)" ]; then
-        repo_filename="${build_subdir}+${timestamp_utc}+${repo_version}+modified.tar.xz"
-    else
-        repo_filename="${build_subdir}+${timestamp_utc}+${repo_version}.tar.xz"
-    fi
+	cat >"${build_dir}/VERSION" <<-EOF
+		---------------------------------------------------------------
+		BUILD_START_LOCALTIME  ${BUILD_START_LOCALTIME}
+		BUILD_END_LOCALTIME    ${BUILD_END_LOCALTIME}
+		GIT_COMMIT             ${repo_version}
+		GIT_COMMIT_LOCALTIME   ${timestamp_local}
+		GIT_DIRTY              ${repo_dirty}
+		---------------------------------------------------------------
+		${repo_status}
+		---------------------------------------------------------------
+	EOF
 
+    repo_filename="${build_subdir}+${timestamp_utc}.tar.xz"
     cached_path="${CACHED_DIR}/${repo_filename}"
-    rm -f "${cached_path}"
-
-    cleanup() { rm -f "${cached_path}"; }
+    temp_path=$(mktemp "${cached_path}.XXXXXX")
+    cleanup() { rm -f "${temp_path}"; }
     trap 'cleanup; exit 130' INT
     trap 'cleanup; exit 143' TERM
     trap 'cleanup' EXIT
-
-    tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" \
-        --exclude="${build_subdir}/src" \
-        -C "${PARENT_DIR}" "${build_subdir}" \
-        -cv | xz -zc -7e >"${cached_path}"
-
-    touch -d "${timestamp}" "${cached_path}"
-
+    if ! tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" \
+            --exclude="${build_subdir}/src" \
+            --transform "s|^${build_subdir}|${build_subdir}+git-${repo_version}${repo_modified}|" \
+            -C "${PARENT_DIR}" "${build_subdir}" \
+            -cv | xz -zc -7e -T0 >"${temp_path}"; then
+        return 1
+    fi
+    touch -d "${timestamp}" "${temp_path}" || return 1
+    mv -f "${temp_path}" "${cached_path}" || return 1
     trap - EXIT INT TERM
 
     return 0
@@ -718,6 +733,12 @@ echo "[*] Starting ARM cross-compiler build..."
 echo ""
 echo ""
 set -x
+BUILD_START_LOCALTIME="$(date '+%Y-%m-%d %H:%M:%S %Z %z')"
+BUILD_END_LOCALTIME="${BUILD_START_LOCALTIME}"
+
+
+archive_build_directory "${SCRIPT_DIR}" "${CROSSBUILD_DIR}"
+exit 1
 
 
 ################################################################################
@@ -927,10 +948,15 @@ fi
 
 ################################################################################
 # Archive the built toolchain
+#
+BUILD_END_LOCALTIME="$(date '+%Y-%m-%d %H:%M:%S %Z %z')"
 set +x
 echo ""
 echo ""
-echo "[*] Done.  Archiving the built toolchain (this will take a while)..."
+echo "[*] Finished compiling."
+echo ""
+echo ""
+echo "[*] Now archiving the built toolchain (this will take a while)..."
 echo ""
 echo ""
 set -x
