@@ -455,6 +455,8 @@ archive_build_directory()
     local repo_dirty=""
     local cached_path=""
 
+    [ -d "${build_dir}" ] || return 1
+
     cd "${repo_dir}"
     git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 1
 
@@ -480,7 +482,8 @@ archive_build_directory()
         printf '%s\n' '---------------------------------------------------------------'
     } >"${build_dir}/VERSION"
 
-    repo_filename="${build_subdir}+${timestamp_utc}.tar.xz"
+    mkdir -p "${CACHED_DIR}"
+    repo_filename="${build_subdir}-${timestamp_utc}.tar.xz"
     cached_path="${CACHED_DIR}/${repo_filename}"
     temp_path=$(mktemp "${cached_path}.XXXXXX")
 
