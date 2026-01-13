@@ -439,6 +439,100 @@ is_arm() {
     esac
 }
 
+build_start() {
+    if [ ! -f "${BUILD_START_PATH}" ]; then
+        write_version_info
+        touch "${BUILD_START_PATH}"
+        rm -f "${BUILD_STOP_PATH}"
+    fi
+    return 0
+}
+
+build_stop() {
+    touch "${BUILD_STOP_PATH}"
+    return 0
+}
+
+build_finish() {
+    local mtime=""
+
+    if [ -z "${BUILD_START_TIME}" ]; then
+        if [ ! -f "${BUILD_START_PATH}" ]; then
+            BUILD_START_TIME="(unknown)"
+        else
+            mtime=$(stat -c %Y "${BUILD_START_PATH}")
+            BUILD_START_TIME="$(date -d "@$mtime" '+%Y-%m-%d %H:%M:%S %Z %z')"
+            read REPO_VERSION REPO_TIMESTAMP REPO_DIRTY <"${BUILD_START_PATH}"
+            append_version_info
+            rm -f "${BUILD_START_PATH}"
+        fi
+    fi
+
+    if [ -z "${BUILD_STOP_TIME}" ]; then
+        if [ ! -f "${BUILD_STOP_PATH}" ]; then
+            BUILD_STOP_TIME="(unknown)"
+        else
+            mtime=$(stat -c %Y "${BUILD_STOP_PATH}")
+            BUILD_STOP_TIME="$(date -d "@$mtime" '+%Y-%m-%d %H:%M:%S %Z %z')"
+            rm -f "${BUILD_STOP_PATH}"
+        fi
+    fi
+
+    return 0
+}
+
+write_version_info() {
+    [ -d "${CROSSBUILD_DIR}" ] || return 1
+
+    cd "${SCRIPT_DIR}"
+    git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 1
+
+    local repo_status="$(git status --porcelain)"
+    local repo_dirty=""
+    local repo_modified=""
+    if [ -n "${repo_status}" ]; then
+        repo_dirty="yes"
+        repo_modified="-modified"
+    else
+        repo_dirty="no"
+        repo_status="(no differences or untracked files)"
+    fi
+
+    local repo_version="$(git rev-parse HEAD)"
+    local timestamp="$(git log -1 --format='@%ct')"
+    local timestamp_utc="$(date -u -d "${timestamp}" '+%Y%m%d%H%M%S')"
+    local timestamp_local="$(date -d "${timestamp}" '+%Y-%m-%d %H:%M:%S %Z %z')"
+
+    {
+        printf '%s\n' '---------------------------------------------------------------'
+        printf 'GIT_COMMIT             %s\n' "${repo_version}"
+        printf 'GIT_COMMIT_LOCALTIME   %s\n' "${timestamp_local}"
+        printf 'GIT_DIRTY              %s\n' "${repo_dirty}"
+        printf 'CPU_ARCHITECTURE       %s\n' "$(uname -m)"
+        printf '%s\n' '---------------------------------------------------------------'
+        printf '%s\n' "${repo_status}"
+        printf '%s\n' '---------------------------------------------------------------'
+        if [ -n "${repo_modified}" ]; then
+        printf '%s\n' "$(git diff)"
+        printf '%s\n' '---------------------------------------------------------------'
+        fi
+    } >"${VERSION_PATH}"
+
+    echo "${repo_version} ${timestamp} ${repo_dirty}" >"${BUILD_START_PATH}"
+
+    return 0
+}
+
+append_version_info() {
+    {
+        printf 'BUILD_START_TIME       %s\n' "${BUILD_START_TIME}"
+        printf 'BUILD_STOP_TIME        %s\n' "${BUILD_STOP_TIME}"
+        printf '%s\n' '---------------------------------------------------------------'
+    } >>"${VERSION_PATH}"
+
+    return 0
+}
+
 archive_build_directory()
 ( # BEGIN sub-shell
     [ -n "$1" ]            || return 1
@@ -447,44 +541,23 @@ archive_build_directory()
     local repo_dir="$1"
     local build_dir="$2"
     local build_subdir="$(basename -- "$build_dir")"
-    local repo_version=""
-    local timestamp=""
+    local version_path="${build_dir}/VERSION"
     local repo_filename=""
-    local repo_status=""
     local repo_modified=""
-    local repo_dirty=""
     local cached_path=""
+    local repo_version="${REPO_VERSION}"
+    local timestamp="${REPO_TIMESTAMP}"
+    local repo_dirty="${REPO_DIRTY}"
 
     [ -d "${build_dir}" ] || return 1
+    [ "${repo_dirty}" = "yes" ] && repo_modified="-modified"
 
-    cd "${repo_dir}"
-    git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 1
-
-    repo_status="$(git status --porcelain)"
-    repo_dirty="$([ -n "${repo_status}" ] && echo yes || echo no)"
-    [ -n "${repo_status}" ] && repo_modified="+modified"
-    [ -z "${repo_status}" ] && repo_status="(no differences or untracked files)"
-
-    repo_version="$(git rev-parse HEAD)"
-    timestamp="$(git log -1 --format='@%ct')"
     timestamp_utc="$(date -u -d "${timestamp}" '+%Y%m%d%H%M%S')"
-    timestamp_local="$(date -d "${timestamp}" '+%Y-%m-%d %H:%M:%S %Z %z')"
-
-    {
-        printf '%s\n' '---------------------------------------------------------------'
-        printf 'GIT_COMMIT             %s\n' "${repo_version}"
-        printf 'GIT_COMMIT_LOCALTIME   %s\n' "${timestamp_local}"
-        printf 'GIT_DIRTY              %s\n' "${repo_dirty}"
-        printf 'BUILD_START_LOCALTIME  %s\n' "${BUILD_START_LOCALTIME}"
-        printf 'BUILD_END_LOCALTIME    %s\n' "${BUILD_END_LOCALTIME}"
-        printf '%s\n' '---------------------------------------------------------------'
-        printf '%s\n' "${repo_status}"
-        printf '%s\n' '---------------------------------------------------------------'
-    } >"${build_dir}/VERSION"
+    repo_filename="${build_subdir}-${timestamp_utc}${repo_modified}.tar.xz"
+    cached_path="${CACHED_DIR}/${repo_filename}"
+    [ -z "${repo_modified}" ] && [ -f "${cached_path}" ] && return 0
 
     mkdir -p "${CACHED_DIR}"
-    repo_filename="${build_subdir}-${timestamp_utc}.tar.xz"
-    cached_path="${CACHED_DIR}/${repo_filename}"
     temp_path=$(mktemp "${cached_path}.XXXXXX")
 
     cleanup() { rm -f "${temp_path}"; }
@@ -710,6 +783,10 @@ install_dependencies() {
 CROSSBUILD_DIR="${SCRIPT_DIR}-build"
 mkdir -p "${CROSSBUILD_DIR}"
 
+BUILD_START_PATH="${CROSSBUILD_DIR}/.build_start"
+BUILD_STOP_PATH="${CROSSBUILD_DIR}/.build_stop"
+VERSION_PATH="${CROSSBUILD_DIR}/VERSION"
+
 STAGEDIR="${CROSSBUILD_DIR}"
 SRC_ROOT="${CROSSBUILD_DIR}/src"
 mkdir -p "$SRC_ROOT"
@@ -740,12 +817,6 @@ echo "[*] Starting ARM cross-compiler build..."
 echo ""
 echo ""
 set -x
-BUILD_START_LOCALTIME="$(date '+%Y-%m-%d %H:%M:%S %Z %z')"
-BUILD_END_LOCALTIME="${BUILD_START_LOCALTIME}"
-
-
-#archive_build_directory "${SCRIPT_DIR}" "${CROSSBUILD_DIR}"
-#exit 1
 
 
 ################################################################################
@@ -762,6 +833,7 @@ PKG_HASH="0f8a4c272d7f17f369ded10a4aca28b8e304828e95526da482b0ccc4dfc9d8e1"
 mkdir -p "${SRC_ROOT}/${PKG_NAME}" && cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
+    build_start
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
@@ -781,6 +853,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     make install
 
     touch "../${PKG_BUILD_SUBDIR}/__package_installed"
+    build_stop
 fi
 )
 
@@ -798,6 +871,7 @@ PKG_HASH="70d124743041974e1220fb39465627ded1df0fdd46da6cd74f6e3da414194d03"
 mkdir -p "${SRC_ROOT}/${PKG_NAME}" && cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
+    build_start
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
@@ -809,6 +883,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     make ARCH=arm INSTALL_HDR_PATH="${SYSROOT}/usr" headers_install
 
     touch "../${PKG_BUILD_SUBDIR}/__package_installed"
+    build_stop
 fi
 )
 
@@ -826,6 +901,7 @@ PKG_HASH="71cd373d0f04615e66c5b5b14d49c1a4c1a08efa7b30625cd240b11bab4062b3"
 mkdir -p "${SRC_ROOT}/${PKG_NAME}" && cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed__gcc" ]; then
+    build_start
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
@@ -853,7 +929,9 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed__gcc" ]; then
 
     $MAKE all-gcc
     make install-gcc
+
     touch "../${PKG_BUILD_SUBDIR}/__package_installed__gcc"
+    build_stop
 fi
 )
 
@@ -868,10 +946,14 @@ PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build-bootstrap"
 cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed__libgcc" ]; then
+    build_start
     cd "${PKG_BUILD_SUBDIR}"
+
     $MAKE all-target-libgcc
     make install-target-libgcc
+
     touch "../${PKG_BUILD_SUBDIR}/__package_installed__libgcc"
+    build_stop
 fi
 )
 
@@ -889,6 +971,7 @@ PKG_HASH="7a35eae33d5372a7c0da1188de798726f68825513b7ae3ebe97aaaa52114f039"
 mkdir -p "${SRC_ROOT}/${PKG_NAME}" && cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
+    build_start
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
@@ -910,6 +993,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     make install
 
     touch "../${PKG_BUILD_SUBDIR}/__package_installed"
+    build_stop
 fi
 )
 
@@ -927,6 +1011,7 @@ PKG_HASH="71cd373d0f04615e66c5b5b14d49c1a4c1a08efa7b30625cd240b11bab4062b3"
 mkdir -p "${SRC_ROOT}/${PKG_NAME}" && cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
+    build_start
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
@@ -950,13 +1035,18 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     make install
 
     touch "../${PKG_BUILD_SUBDIR}/__package_installed"
+    build_stop
 fi
 )
 
 ################################################################################
+# Finalize
+#
+build_finish
+
+################################################################################
 # Archive the built toolchain
 #
-BUILD_END_LOCALTIME="$(date '+%Y-%m-%d %H:%M:%S %Z %z')"
 set +x
 echo ""
 echo ""
