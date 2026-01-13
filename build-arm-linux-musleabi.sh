@@ -430,6 +430,48 @@ is_version_git() {
     esac
 }
 
+archive_build_directory()
+( # BEGIN sub-shell
+    [ -n "$1" ]            || return 1
+    [ -n "$2" ]            || return 1
+
+    local repo_dir="$1"
+    local build_dir="$2"
+    local build_subdir="$(basename $build_dir)"
+    local repo_version=""
+    local timestamp=""
+    local repo_filename=""
+    local cached_path=""
+
+    cd "${repo_dir}"
+    repo_version="$(git rev-parse HEAD)"
+    timestamp="$(git log -1 --format='@%ct')"
+    timestamp_local="$(date -d ${timestamp} '+%Y%m%d+%H%M%S')"
+
+    if ! git diff-index --quiet HEAD -- || [ -n "$(git ls-files --others --exclude-standard)" ]; then
+        repo_filename="${build_subdir}+${timestamp_local}+${repo_version}+modified.tar.xz"
+    else
+        repo_filename="${build_subdir}+${timestamp_local}+${repo_version}.tar.xz"
+    fi
+
+    cached_path="${CACHED_DIR}/${repo_filename}"
+    rm -f "${cached_path}"
+
+    cleanup() { rm -f "${cached_path}"; }
+    trap 'cleanup; exit 130' INT
+    trap 'cleanup; exit 143' TERM
+    trap 'cleanup' EXIT
+
+    tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" -cv \
+        -C "${PARENT_DIR}" "${build_subdir}" --exclude='src' | xz -zc -7e >"${cached_path}"
+
+    touch -d "${timestamp}" "${cached_path}"
+
+    trap - EXIT INT TERM
+
+    return 0
+) # END sub-shell
+
 update_patch_library() {
     [ -n "$1" ]            || return 1
     [ -n "$2" ]            || return 1
@@ -666,6 +708,7 @@ echo "[*] Starting ARM cross-compiler build..."
 echo ""
 echo ""
 set -x
+#archive_build_directory "${SCRIPT_DIR}" "${CROSSBUILD_DIR}"
 #exit 1
 
 
@@ -873,6 +916,12 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     touch "../${PKG_BUILD_SUBDIR}/__package_installed"
 fi
 )
+
+################################################################################
+# Archive the built toolchain
+
+archive_build_directory "${SCRIPT_DIR}" "${CROSSBUILD_DIR}"
+
 
 ################################################################################
 # Interpreter path for running dynamically-linked executables on this device.
