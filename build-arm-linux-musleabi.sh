@@ -718,8 +718,6 @@ echo "[*] Starting ARM cross-compiler build..."
 echo ""
 echo ""
 set -x
-#archive_build_directory "${SCRIPT_DIR}" "${CROSSBUILD_DIR}"
-#exit 1
 
 
 ################################################################################
