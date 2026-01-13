@@ -951,7 +951,11 @@ archive_build_directory "${SCRIPT_DIR}" "${CROSSBUILD_DIR}"
 # 
 if is_arm; then
     if [ ! -f "/lib/ld-musl-arm.so.1" ]; then
-        sudo ln -sfn "${SYSROOT}/lib/libc.so" "/lib/ld-musl-arm.so.1"
+        if ! sudo -n true 2>/dev/null; then
+            echo "Password required."
+        else
+            sudo ln -sfn "${SYSROOT}/lib/libc.so" "/lib/ld-musl-arm.so.1"
+        fi
     fi
 fi
 
@@ -959,8 +963,12 @@ fi
 # Shortcut to top-level of this toolchain
 #
 TOPDIR=/xcc
-if [ ! -f "${TOPDIR}" ]; then
-    sudo ln -sfn "${CROSSBUILD_DIR}" "${TOPDIR}"
+if [ ! -d "${TOPDIR}" ]; then
+    if ! sudo -n true 2>/dev/null; then
+        echo "Password required."
+    else
+        sudo ln -sfn "${CROSSBUILD_DIR}" "${TOPDIR}"
+    fi
 fi
 
 ################################################################################
