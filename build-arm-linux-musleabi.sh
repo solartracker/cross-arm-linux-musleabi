@@ -741,8 +741,8 @@ BUILD_START_LOCALTIME="$(date '+%Y-%m-%d %H:%M:%S %Z %z')"
 BUILD_END_LOCALTIME="${BUILD_START_LOCALTIME}"
 
 
-archive_build_directory "${SCRIPT_DIR}" "${CROSSBUILD_DIR}"
-exit 1
+#archive_build_directory "${SCRIPT_DIR}" "${CROSSBUILD_DIR}"
+#exit 1
 
 
 ################################################################################
