@@ -457,30 +457,33 @@ archive_build_directory()
 
     cd "${repo_dir}"
     git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 1
+
     repo_status="$(git status --porcelain)"
     repo_dirty="$([ -n "${repo_status}" ] && echo yes || echo no)"
     [ -n "${repo_status}" ] && repo_modified="+modified"
     [ -z "${repo_status}" ] && repo_status="(no differences or untracked files)"
+
     repo_version="$(git rev-parse HEAD)"
     timestamp="$(git log -1 --format='@%ct')"
-    timestamp_utc="$(date -u -d "${timestamp}" '+%Y%m%d+%H%M%S')"
+    timestamp_utc="$(date -u -d "${timestamp}" '+%Y%m%d%H%M%S')"
     timestamp_local="$(date -d "${timestamp}" '+%Y-%m-%d %H:%M:%S %Z %z')"
 
-	cat >"${build_dir}/VERSION" <<-EOF
-		---------------------------------------------------------------
-		BUILD_START_LOCALTIME  ${BUILD_START_LOCALTIME}
-		BUILD_END_LOCALTIME    ${BUILD_END_LOCALTIME}
-		GIT_COMMIT             ${repo_version}
-		GIT_COMMIT_LOCALTIME   ${timestamp_local}
-		GIT_DIRTY              ${repo_dirty}
-		---------------------------------------------------------------
-		${repo_status}
-		---------------------------------------------------------------
-	EOF
+    {
+        printf '%s\n' '---------------------------------------------------------------'
+        printf 'GIT_COMMIT             %s\n' "${repo_version}"
+        printf 'GIT_COMMIT_LOCALTIME   %s\n' "${timestamp_local}"
+        printf 'GIT_DIRTY              %s\n' "${repo_dirty}"
+        printf 'BUILD_START_LOCALTIME  %s\n' "${BUILD_START_LOCALTIME}"
+        printf 'BUILD_END_LOCALTIME    %s\n' "${BUILD_END_LOCALTIME}"
+        printf '%s\n' '---------------------------------------------------------------'
+        printf '%s\n' "${repo_status}"
+        printf '%s\n' '---------------------------------------------------------------'
+    } >"${build_dir}/VERSION"
 
     repo_filename="${build_subdir}+${timestamp_utc}.tar.xz"
     cached_path="${CACHED_DIR}/${repo_filename}"
     temp_path=$(mktemp "${cached_path}.XXXXXX")
+
     cleanup() { rm -f "${temp_path}"; }
     trap 'cleanup; exit 130' INT
     trap 'cleanup; exit 143' TERM
@@ -492,6 +495,7 @@ archive_build_directory()
             -cv | xz -zc -7e -T0 >"${temp_path}"; then
         return 1
     fi
+
     touch -d "${timestamp}" "${temp_path}" || return 1
     mv -f "${temp_path}" "${cached_path}" || return 1
     trap - EXIT INT TERM
@@ -956,7 +960,7 @@ echo ""
 echo "[*] Finished compiling."
 echo ""
 echo ""
-echo "[*] Now archiving the built toolchain (this will take a while)..."
+echo "[*] Now archiving the built toolchain (this may take a while)..."
 echo ""
 echo ""
 set -x
