@@ -28,6 +28,39 @@ set -e
 set -x
 
 ################################################################################
+# General
+
+CROSSBUILD_DIR="${SCRIPT_DIR}-build"
+mkdir -p "${CROSSBUILD_DIR}"
+
+BUILD_START_PATH="${CROSSBUILD_DIR}/.build_start"
+BUILD_STOP_PATH="${CROSSBUILD_DIR}/.build_stop"
+VERSION_PATH="${CROSSBUILD_DIR}/VERSION"
+
+STAGEDIR="${CROSSBUILD_DIR}"
+SRC_ROOT="${CROSSBUILD_DIR}/src"
+mkdir -p "$SRC_ROOT"
+
+#export LDFLAGS="-L${STAGEDIR}/lib -Wl,--gc-sections"
+#export CPPFLAGS="-I${STAGEDIR}/include"
+#export CFLAGS="-O3 -march=armv7-a -mtune=cortex-a9 -fomit-frame-pointer -mabi=aapcs-linux -marm -msoft-float -mfloat-abi=soft -ffunction-sections -fdata-sections -pipe -Wall -fPIC -std=gnu99"
+
+MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
+#MAKE="make -j1"                                  # one job at a time
+
+#export PKG_CONFIG="pkg-config"
+#export PKG_CONFIG_LIBDIR="${STAGEDIR}/lib/pkgconfig"
+#unset PKG_CONFIG_PATH
+
+# sudo apt update && sudo apt install build-essential binutils bison flex texinfo gawk make perl patch file wget curl git libgmp-dev libmpfr-dev libmpc-dev libisl-dev zlib1g-dev
+
+export PREFIX="${CROSSBUILD_DIR}"
+export TARGET=arm-linux-musleabi
+export PATH="${PREFIX}/bin:${PATH}"
+SYSROOT="${PREFIX}/${TARGET}"
+
+
+################################################################################
 # Helpers
 
 # If autoconf/configure fails due to missing libraries or undefined symbols, you
@@ -778,37 +811,8 @@ install_dependencies() {
 
 
 ################################################################################
-# General
-
-CROSSBUILD_DIR="${SCRIPT_DIR}-build"
-mkdir -p "${CROSSBUILD_DIR}"
-
-BUILD_START_PATH="${CROSSBUILD_DIR}/.build_start"
-BUILD_STOP_PATH="${CROSSBUILD_DIR}/.build_stop"
-VERSION_PATH="${CROSSBUILD_DIR}/VERSION"
-
-STAGEDIR="${CROSSBUILD_DIR}"
-SRC_ROOT="${CROSSBUILD_DIR}/src"
-mkdir -p "$SRC_ROOT"
-
-#export LDFLAGS="-L${STAGEDIR}/lib -Wl,--gc-sections"
-#export CPPFLAGS="-I${STAGEDIR}/include"
-#export CFLAGS="-O3 -march=armv7-a -mtune=cortex-a9 -fomit-frame-pointer -mabi=aapcs-linux -marm -msoft-float -mfloat-abi=soft -ffunction-sections -fdata-sections -pipe -Wall -fPIC -std=gnu99"
-
-MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
-#MAKE="make -j1"                                  # one job at a time
-
-#export PKG_CONFIG="pkg-config"
-#export PKG_CONFIG_LIBDIR="${STAGEDIR}/lib/pkgconfig"
-#unset PKG_CONFIG_PATH
-
-# sudo apt update && sudo apt install build-essential binutils bison flex texinfo gawk make perl patch file wget curl git libgmp-dev libmpfr-dev libmpc-dev libisl-dev zlib1g-dev
-
-export PREFIX="${CROSSBUILD_DIR}"
-export TARGET=arm-linux-musleabi
-export PATH="${PREFIX}/bin:${PATH}"
-SYSROOT="${PREFIX}/${TARGET}"
-
+# Main
+#
 set +x
 install_dependencies
 echo ""
