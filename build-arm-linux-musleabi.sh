@@ -225,7 +225,9 @@ clone_github()
             rm -rf .git
             cd ../..
             #chmod -R g-w,o-w "${temp_dir}/${source_subdir}"
-            tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" -cv -C "${temp_dir}" "${source_subdir}" | xz -zc -7e >"${cached_path}"
+            tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" \
+                -C "${temp_dir}" "${source_subdir}" \
+                -cv | xz -zc -7e >"${cached_path}"
             touch -d "${timestamp}" "${cached_path}"
             rm -rf "${temp_dir}"
             trap - EXIT INT TERM
@@ -430,6 +432,13 @@ is_version_git() {
     esac
 }
 
+is_arm() {
+    case "$(uname -m)" in
+        arm*|aarch64) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 archive_build_directory()
 ( # BEGIN sub-shell
     [ -n "$1" ]            || return 1
@@ -437,21 +446,22 @@ archive_build_directory()
 
     local repo_dir="$1"
     local build_dir="$2"
-    local build_subdir="$(basename $build_dir)"
+    local build_subdir="$(basename -- "$build_dir")"
     local repo_version=""
     local timestamp=""
     local repo_filename=""
     local cached_path=""
 
     cd "${repo_dir}"
+    git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 1
     repo_version="$(git rev-parse HEAD)"
     timestamp="$(git log -1 --format='@%ct')"
-    timestamp_local="$(date -d ${timestamp} '+%Y%m%d+%H%M%S')"
+    timestamp_utc="$(date -u -d "${timestamp}" '+%Y%m%d+%H%M%S')"
 
-    if ! git diff-index --quiet HEAD -- || [ -n "$(git ls-files --others --exclude-standard)" ]; then
-        repo_filename="${build_subdir}+${timestamp_local}+${repo_version}+modified.tar.xz"
+    if [ -n "$(git status --porcelain)" ]; then
+        repo_filename="${build_subdir}+${timestamp_utc}+${repo_version}+modified.tar.xz"
     else
-        repo_filename="${build_subdir}+${timestamp_local}+${repo_version}.tar.xz"
+        repo_filename="${build_subdir}+${timestamp_utc}+${repo_version}.tar.xz"
     fi
 
     cached_path="${CACHED_DIR}/${repo_filename}"
@@ -462,8 +472,10 @@ archive_build_directory()
     trap 'cleanup; exit 143' TERM
     trap 'cleanup' EXIT
 
-    tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" -cv \
-        -C "${PARENT_DIR}" "${build_subdir}" --exclude='src' | xz -zc -7e >"${cached_path}"
+    tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" \
+        --exclude="${build_subdir}/src" \
+        -C "${PARENT_DIR}" "${build_subdir}" \
+        -cv | xz -zc -7e >"${cached_path}"
 
     touch -d "${timestamp}" "${cached_path}"
 
@@ -523,6 +535,7 @@ check_static() {
 }
 
 finalize_build() {
+    set +x
     echo ""
     echo "Stripping symbols and sections from files..."
     strip -v "$@"
@@ -540,6 +553,7 @@ finalize_build() {
     for bin in "$@"; do
         mv -f "${bin}" "${bin}.static"
     done
+    set -x
 
     return 0
 }
@@ -696,14 +710,10 @@ export TARGET=arm-linux-musleabi
 export PATH="${PREFIX}/bin:${PATH}"
 SYSROOT="${PREFIX}/${TARGET}"
 
-# shortcut for top-level of this toolchain
-#TOPDIR=/xcc
-#if [ ! -f "${TOPDIR}" ]; then
-#    sudo ln -sfn "${CROSSBUILD_DIR}" "${TOPDIR}"
-#fi
-
 set +x
 install_dependencies
+echo ""
+echo ""
 echo "[*] Starting ARM cross-compiler build..."
 echo ""
 echo ""
@@ -919,30 +929,44 @@ fi
 
 ################################################################################
 # Archive the built toolchain
-
+set +x
+echo ""
+echo ""
+echo "[*] Done.  Archiving the built toolchain (this will take a while)..."
+echo ""
+echo ""
+set -x
 archive_build_directory "${SCRIPT_DIR}" "${CROSSBUILD_DIR}"
-
 
 ################################################################################
 # Interpreter path for running dynamically-linked executables on this device.
 #
 # Normally, cross-compiled programs do not run on the host, but the Raspberry Pi
 # is backwards compatible with ARMv7 soft-float programs.  The actual target
-# devices are things like home routers, smart tv's, smart phone, etc.
+# devices are things like home routers, smart tv's, smart phone, etc.  So, this
+# is really only for convenience for Pi users, to test programs on the host.
 #
-# If you only create statically-linked executables, then you don't need to do
-# this.
+# If you only create statically-linked executables, then you don't even need to
+# do this.
 # 
-if [ ! -f "/lib/ld-musl-arm.so.1" ]; then
-    sudo ln -sfn "${SYSROOT}/lib/libc.so" "/lib/ld-musl-arm.so.1"
+if is_arm; then
+    if [ ! -f "/lib/ld-musl-arm.so.1" ]; then
+        sudo ln -sfn "${SYSROOT}/lib/libc.so" "/lib/ld-musl-arm.so.1"
+    fi
 fi
 
 ################################################################################
-# Show
+# Shortcut to top-level of this toolchain
+#
+TOPDIR=/xcc
+if [ ! -f "${TOPDIR}" ]; then
+    sudo ln -sfn "${CROSSBUILD_DIR}" "${TOPDIR}"
+fi
+
+################################################################################
+# Show example
 set +e
 set +x
-echo ""
-echo ""
 echo ""
 echo ""
 echo "Environment variables for cross-compiling:"
