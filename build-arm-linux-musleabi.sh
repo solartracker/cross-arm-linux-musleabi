@@ -506,7 +506,7 @@ write_version_info() {
     {
         printf '%s\n' '---------------------------------------------------------------'
         printf 'GIT_COMMIT             %s\n' "${repo_version}"
-        printf 'GIT_COMMIT_LOCALTIME   %s\n' "${timestamp_local}"
+        printf 'GIT_COMMIT_TIME        %s\n' "${timestamp_local}"
         printf 'GIT_DIRTY              %s\n' "${repo_dirty}"
         printf 'CPU_ARCHITECTURE       %s\n' "$(uname -m)"
         printf '%s\n' '---------------------------------------------------------------'
