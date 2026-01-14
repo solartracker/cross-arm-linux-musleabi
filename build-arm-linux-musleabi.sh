@@ -321,6 +321,7 @@ clone_github()
     local target_dir="$5"
     local cached_path="${CACHED_DIR}/${source}"
     local target_path="${target_dir}/${source}"
+    local temp_path=""
     local temp_dir=""
     local timestamp=""
 
@@ -328,10 +329,11 @@ clone_github()
         umask 022
         mkdir -p "${CACHED_DIR}"
         if [ ! -f "${target_path}" ]; then
-            cleanup() { rm -rf "${cached_path}" "${temp_dir}"; }
+            cleanup() { rm -rf "${temp_path}" "${temp_dir}"; }
             trap 'cleanup; exit 130' INT
             trap 'cleanup; exit 143' TERM
             trap 'cleanup' EXIT
+            temp_path=$(mktemp "${cached_path}.XXXXXX")
             temp_dir=$(mktemp -d "${target_dir}/temp.XXXXXX")
             mkdir -p "${temp_dir}"
             if ! retry 100 git clone "${source_url}" "${temp_dir}/${source_subdir}"; then
@@ -348,20 +350,21 @@ clone_github()
             rm -rf .git
             cd ../..
             #chmod -R g-w,o-w "${temp_dir}/${source_subdir}"
-            tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" \
-                -C "${temp_dir}" "${source_subdir}" \
-                -cv | xz -zc -7e -T0 >"${cached_path}"
-            touch -d "${timestamp}" "${cached_path}"
-            rm -rf "${temp_dir}"
+            if ! tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" \
+                    -C "${temp_dir}" "${source_subdir}" \
+                    -cv | xz -zc -7e -T0 >"${temp_path}"; then
+                return 1
+            fi
+            touch -d "${timestamp}" "${temp_path}" || return 1
+            mv -f "${temp_path}" "${cached_path}" || return 1
+            rm -rf "${temp_dir}" || return 1
             trap - EXIT INT TERM
         else
             cleanup() { rm -f "${cached_path}"; }
             trap 'cleanup; exit 130' INT
             trap 'cleanup; exit 143' TERM
             trap 'cleanup' EXIT
-            if ! mv -f "${target_path}" "${cached_path}"; then
-                return 1
-            fi
+            mv -f "${target_path}" "${cached_path}" || return 1
             trap - EXIT INT TERM
         fi
     fi
@@ -525,11 +528,11 @@ unpack_archive()
     local dir_tmp=""
 
     if [ ! -d "${target_dir}" ]; then
-        dir_tmp=$(mktemp -d "${target_dir}.XXXXXX")
         cleanup() { rm -rf "${dir_tmp}"; }
         trap 'cleanup; exit 130' INT
         trap 'cleanup; exit 143' TERM
         trap 'cleanup' EXIT
+        dir_tmp=$(mktemp -d "${target_dir}.XXXXXX")
         mkdir -p "${dir_tmp}"
         if extract_package "${source_path}" "${dir_tmp}"; then
             # try to rename single sub-directory
@@ -736,6 +739,7 @@ archive_build_directory()
     local repo_filename=""
     local repo_modified=""
     local cached_path=""
+    local temp_path=""
     local repo_version="${REPO_VERSION}"
     local timestamp="${REPO_TIMESTAMP}"
     local repo_dirty="${REPO_DIRTY}"
@@ -749,12 +753,12 @@ archive_build_directory()
     [ -z "${repo_modified}" ] && [ -f "${cached_path}" ] && return 0
 
     mkdir -p "${CACHED_DIR}"
-    temp_path=$(mktemp "${cached_path}.XXXXXX")
 
     cleanup() { rm -f "${temp_path}"; }
     trap 'cleanup; exit 130' INT
     trap 'cleanup; exit 143' TERM
     trap 'cleanup' EXIT
+    temp_path=$(mktemp "${cached_path}.XXXXXX")
     if ! tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" \
             --exclude="${build_subdir}/src" \
             --transform "s|^${build_subdir}|${build_subdir}+git-${repo_version}${repo_modified}|" \
