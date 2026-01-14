@@ -472,7 +472,7 @@ is_arm() {
     esac
 }
 
-on_build_start() {
+on_build_started() {
     if [ ! -f "${BUILD_START_PATH}" ]; then
         write_version_info
         touch "${BUILD_START_PATH}"
@@ -481,12 +481,7 @@ on_build_start() {
     return 0
 }
 
-on_build_stop() {
-    touch "${BUILD_STOP_PATH}"
-    return 0
-}
-
-on_build_finish() {
+on_build_finished() {
     local mtime=""
 
     if [ -z "${BUILD_START_TIME}" ]; then
@@ -498,6 +493,7 @@ on_build_finish() {
             read REPO_VERSION REPO_TIMESTAMP REPO_DIRTY <"${BUILD_START_PATH}"
             append_version_info
             rm -f "${BUILD_START_PATH}"
+            touch "${BUILD_STOP_PATH}"
         fi
     fi
 
@@ -837,7 +833,7 @@ PKG_HASH="0f8a4c272d7f17f369ded10a4aca28b8e304828e95526da482b0ccc4dfc9d8e1"
 mkdir -p "${SRC_ROOT}/${PKG_NAME}" && cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
-    on_build_start
+    on_build_started
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
@@ -857,7 +853,6 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     make install
 
     touch "../${PKG_BUILD_SUBDIR}/__package_installed"
-    on_build_stop
 fi
 )
 
@@ -875,7 +870,7 @@ PKG_HASH="70d124743041974e1220fb39465627ded1df0fdd46da6cd74f6e3da414194d03"
 mkdir -p "${SRC_ROOT}/${PKG_NAME}" && cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
-    on_build_start
+    on_build_started
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
@@ -887,7 +882,6 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     make ARCH=arm INSTALL_HDR_PATH="${SYSROOT}/usr" headers_install
 
     touch "../${PKG_BUILD_SUBDIR}/__package_installed"
-    on_build_stop
 fi
 )
 
@@ -905,7 +899,7 @@ PKG_HASH="71cd373d0f04615e66c5b5b14d49c1a4c1a08efa7b30625cd240b11bab4062b3"
 mkdir -p "${SRC_ROOT}/${PKG_NAME}" && cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed__gcc" ]; then
-    on_build_start
+    on_build_started
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
@@ -935,7 +929,6 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed__gcc" ]; then
     make install-gcc
 
     touch "../${PKG_BUILD_SUBDIR}/__package_installed__gcc"
-    on_build_stop
 fi
 )
 
@@ -950,14 +943,13 @@ PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build-bootstrap"
 cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed__libgcc" ]; then
-    on_build_start
+    on_build_started
     cd "${PKG_BUILD_SUBDIR}"
 
     $MAKE all-target-libgcc
     make install-target-libgcc
 
     touch "../${PKG_BUILD_SUBDIR}/__package_installed__libgcc"
-    on_build_stop
 fi
 )
 
@@ -975,7 +967,7 @@ PKG_HASH="7a35eae33d5372a7c0da1188de798726f68825513b7ae3ebe97aaaa52114f039"
 mkdir -p "${SRC_ROOT}/${PKG_NAME}" && cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
-    on_build_start
+    on_build_started
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
@@ -997,7 +989,6 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     make install
 
     touch "../${PKG_BUILD_SUBDIR}/__package_installed"
-    on_build_stop
 fi
 )
 
@@ -1015,7 +1006,7 @@ PKG_HASH="71cd373d0f04615e66c5b5b14d49c1a4c1a08efa7b30625cd240b11bab4062b3"
 mkdir -p "${SRC_ROOT}/${PKG_NAME}" && cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
-    on_build_start
+    on_build_started
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
@@ -1039,14 +1030,13 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     make install
 
     touch "../${PKG_BUILD_SUBDIR}/__package_installed"
-    on_build_stop
 fi
 )
 
 ################################################################################
-# Finalize
+# Done compiling the toolchain
 #
-on_build_finish
+on_build_finished
 
 ################################################################################
 # Archive the built toolchain
