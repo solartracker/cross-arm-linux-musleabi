@@ -60,7 +60,7 @@ SYSROOT="${PREFIX}/${TARGET}"
 
 ################################################################################
 # Host dependencies
-
+#
 BUILD_RC="${HOME}/.cross-buildrc"
 
 load_install_pref() {
@@ -586,6 +586,84 @@ is_version_git() {
     esac
 }
 
+update_patch_library() {
+    [ -n "$1" ]            || return 1
+    [ -n "$2" ]            || return 1
+    [ -n "$3" ]            || return 1
+    [ -n "$4" ]            || return 1
+    [ -n "${PARENT_DIR}" ] || return 1
+    [ -n "${SCRIPT_DIR}" ] || return 1
+
+    local git_commit="$1"
+    local patches_dir="$2"
+    local pkg_name="$3"
+    local pkg_subdir="$4"
+    local entware_packages_dir="${PARENT_DIR}/entware-packages"
+
+    if [ ! -d "${entware_packages_dir}" ]; then
+        cd "${PARENT_DIR}"
+        git clone https://github.com/Entware/entware-packages
+    fi
+
+    cd "${entware_packages_dir}"
+    git fetch origin
+    git reset --hard "${git_commit}"
+    [ -d "${patches_dir}" ] || return 1
+    mkdir -p "${SCRIPT_DIR}/patches/${pkg_name}/${pkg_subdir}/entware"
+    cp -pf "${patches_dir}"/* "${SCRIPT_DIR}/patches/${pkg_name}/${pkg_subdir}/entware/"
+    cd ..
+
+    return 0
+}
+
+check_static() {
+    local rc=0
+    for bin in "$@"; do
+        echo "Checking ${bin}"
+        file "${bin}" || true
+        if readelf -d "${bin}" 2>/dev/null | grep NEEDED; then
+            rc=1
+        fi || true
+        ldd "${bin}" 2>&1 || true
+    done
+
+    if [ ${rc} -eq 1 ]; then
+        echo "*** NOT STATICALLY LINKED ***"
+        echo "*** NOT STATICALLY LINKED ***"
+        echo "*** NOT STATICALLY LINKED ***"
+    fi
+
+    return ${rc}
+}
+
+finalize_build() {
+    set +x
+    echo ""
+    echo "Stripping symbols and sections from files..."
+    strip -v "$@"
+
+    # Exit here, if the programs are not statically linked.
+    # If any binaries are not static, check_static() returns 1
+    # set -e will cause the shell to exit here, so renaming won't happen below.
+    echo ""
+    echo "Checking statically linked programs..."
+    check_static "$@"
+
+    # Append ".static" to the program names
+    echo ""
+    echo "Renaming programs with .static suffix..."
+    for bin in "$@"; do
+        mv -f "${bin}" "${bin}.static"
+    done
+    set -x
+
+    return 0
+}
+
+################################################################################
+# Archive build directory
+#
+
 is_arm() {
     case "$(uname -m)" in
         arm*|aarch64) return 0 ;;
@@ -722,80 +800,6 @@ archive_build_directory()
 
     return 0
 ) # END sub-shell
-
-update_patch_library() {
-    [ -n "$1" ]            || return 1
-    [ -n "$2" ]            || return 1
-    [ -n "$3" ]            || return 1
-    [ -n "$4" ]            || return 1
-    [ -n "${PARENT_DIR}" ] || return 1
-    [ -n "${SCRIPT_DIR}" ] || return 1
-
-    local git_commit="$1"
-    local patches_dir="$2"
-    local pkg_name="$3"
-    local pkg_subdir="$4"
-    local entware_packages_dir="${PARENT_DIR}/entware-packages"
-
-    if [ ! -d "${entware_packages_dir}" ]; then
-        cd "${PARENT_DIR}"
-        git clone https://github.com/Entware/entware-packages
-    fi
-
-    cd "${entware_packages_dir}"
-    git fetch origin
-    git reset --hard "${git_commit}"
-    [ -d "${patches_dir}" ] || return 1
-    mkdir -p "${SCRIPT_DIR}/patches/${pkg_name}/${pkg_subdir}/entware"
-    cp -pf "${patches_dir}"/* "${SCRIPT_DIR}/patches/${pkg_name}/${pkg_subdir}/entware/"
-    cd ..
-
-    return 0
-}
-
-check_static() {
-    local rc=0
-    for bin in "$@"; do
-        echo "Checking ${bin}"
-        file "${bin}" || true
-        if readelf -d "${bin}" 2>/dev/null | grep NEEDED; then
-            rc=1
-        fi || true
-        ldd "${bin}" 2>&1 || true
-    done
-
-    if [ ${rc} -eq 1 ]; then
-        echo "*** NOT STATICALLY LINKED ***"
-        echo "*** NOT STATICALLY LINKED ***"
-        echo "*** NOT STATICALLY LINKED ***"
-    fi
-
-    return ${rc}
-}
-
-finalize_build() {
-    set +x
-    echo ""
-    echo "Stripping symbols and sections from files..."
-    strip -v "$@"
-
-    # Exit here, if the programs are not statically linked.
-    # If any binaries are not static, check_static() returns 1
-    # set -e will cause the shell to exit here, so renaming won't happen below.
-    echo ""
-    echo "Checking statically linked programs..."
-    check_static "$@"
-
-    # Append ".static" to the program names
-    echo ""
-    echo "Renaming programs with .static suffix..."
-    for bin in "$@"; do
-        mv -f "${bin}" "${bin}.static"
-    done
-    set -x
-
-    return 0
-}
 
 ################################################################################
 # Main
