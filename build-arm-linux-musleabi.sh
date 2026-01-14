@@ -488,14 +488,16 @@ on_build_finished() {
         if [ ! -f "${BUILD_START_PATH}" ]; then
             BUILD_START_TIME="(unknown)"
             BUILD_STOP_TIME="(unknown)"
+            write_version_info
         else
             mtime=$(stat -c %Y "${BUILD_START_PATH}")
             BUILD_START_TIME="$(date -d "@$mtime" '+%Y-%m-%d %H:%M:%S %Z %z')"
             BUILD_STOP_TIME="$(date '+%Y-%m-%d %H:%M:%S %Z %z')"
-            read REPO_VERSION REPO_TIMESTAMP REPO_DIRTY <"${BUILD_START_PATH}"
-            append_version_info
-            rm -f "${BUILD_START_PATH}"
         fi
+
+        read REPO_VERSION REPO_TIMESTAMP REPO_DIRTY <"${BUILD_START_PATH}"
+        rm -f "${BUILD_START_PATH}"
+        append_version_info
     fi
 
     return 0
