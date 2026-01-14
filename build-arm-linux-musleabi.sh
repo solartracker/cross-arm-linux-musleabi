@@ -61,42 +61,22 @@ SYSROOT="${PREFIX}/${TARGET}"
 ################################################################################
 # Host dependencies
 #
-BUILD_RC="${HOME}/.cross-buildrc"
-
-load_install_pref() {
-    INSTALL_DEPS="ask"
-    [ -f "$BUILD_RC" ] && . "$BUILD_RC"
-    return 0
-}
-
-save_install_pref() {
-    echo "INSTALL_DEPS=$INSTALL_DEPS" > "$BUILD_RC"
-    return 0
-}
 
 prompt_install_choice() {
     echo
     echo "Host dependencies are missing or outdated."
     echo "Choose an action:"
     echo "  [y] Install now"
-    echo "  [a] Always install automatically"
     echo "  [n] Do not install (abort build)"
     echo
 
-    read -r -p "Selection [y/a/n]: " choice
+    read -r -p "Selection [y/n]: " choice
 
     case "$choice" in
         y|Y)
             return 0
             ;;
-        a|A)
-            INSTALL_DEPS="yes"
-            save_install_pref
-            return 0
-            ;;
         n|N)
-            INSTALL_DEPS="no"
-            #save_install_pref
             return 1
             ;;
         *)
@@ -108,7 +88,6 @@ prompt_install_choice() {
 }
 
 install_dependencies() {
-    load_install_pref
 
     # list each package and optional version
     # example: "build-essential 12.9"
@@ -160,19 +139,9 @@ install_dependencies() {
         return 0
     fi
 
-    case "$INSTALL_DEPS" in
-        yes)
-            ;;
-        no)
-            echo "[!] Missing dependencies and auto-install disabled."
-            return 1
-            ;;
-        ask)
-            if ! prompt_install_choice; then
-                return 1
-            fi
-            ;;
-    esac
+    if ! prompt_install_choice; then
+        return 1
+    fi
 
     echo "[*] Installing dependencies: ${to_install[*]}"
     sudo apt-get update
