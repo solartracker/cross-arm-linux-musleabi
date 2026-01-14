@@ -34,7 +34,6 @@ CROSSBUILD_DIR="${SCRIPT_DIR}-build"
 mkdir -p "${CROSSBUILD_DIR}"
 
 BUILD_START_PATH="${CROSSBUILD_DIR}/.build_start"
-BUILD_STOP_PATH="${CROSSBUILD_DIR}/.build_stop"
 VERSION_PATH="${CROSSBUILD_DIR}/VERSION"
 
 STAGEDIR="${CROSSBUILD_DIR}"
@@ -476,7 +475,6 @@ on_build_started() {
     if [ ! -f "${BUILD_START_PATH}" ]; then
         write_version_info
         touch "${BUILD_START_PATH}"
-        rm -f "${BUILD_STOP_PATH}"
     fi
     return 0
 }
@@ -490,20 +488,10 @@ on_build_finished() {
         else
             mtime=$(stat -c %Y "${BUILD_START_PATH}")
             BUILD_START_TIME="$(date -d "@$mtime" '+%Y-%m-%d %H:%M:%S %Z %z')"
+            BUILD_STOP_TIME="$(date '+%Y-%m-%d %H:%M:%S %Z %z')"
             read REPO_VERSION REPO_TIMESTAMP REPO_DIRTY <"${BUILD_START_PATH}"
             append_version_info
             rm -f "${BUILD_START_PATH}"
-            touch "${BUILD_STOP_PATH}"
-        fi
-    fi
-
-    if [ -z "${BUILD_STOP_TIME}" ]; then
-        if [ ! -f "${BUILD_STOP_PATH}" ]; then
-            BUILD_STOP_TIME="(unknown)"
-        else
-            mtime=$(stat -c %Y "${BUILD_STOP_PATH}")
-            BUILD_STOP_TIME="$(date -d "@$mtime" '+%Y-%m-%d %H:%M:%S %Z %z')"
-            rm -f "${BUILD_STOP_PATH}"
         fi
     fi
 
