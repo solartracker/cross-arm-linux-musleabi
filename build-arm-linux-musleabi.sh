@@ -762,7 +762,7 @@ archive_build_directory()
     temp_path=$(mktemp "${cached_path}.XXXXXX")
     if ! tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" \
             --exclude="${build_subdir}/src" \
-            --transform "s|^${build_subdir}|${build_subdir}+git-${repo_version}${repo_modified}|" \
+            --transform "s|^${build_subdir}|${build_subdir}-${host_cpu}+git-${repo_version}${repo_modified}|" \
             -C "${PARENT_DIR}" "${build_subdir}" \
             -cv | xz -zc -7e -T0 >"${temp_path}"; then
         return 1
