@@ -89,7 +89,7 @@ prompt_install_choice() {
 
 install_dependencies() {
 
-    # list each package and optional version
+    # list each package and optional minimum version
     # example: "build-essential 12.9"
     local dependencies=(
         "build-essential"
