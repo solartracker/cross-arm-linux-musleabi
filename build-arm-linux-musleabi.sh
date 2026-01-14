@@ -743,12 +743,13 @@ archive_build_directory()
     local repo_version="${REPO_VERSION}"
     local timestamp="${REPO_TIMESTAMP}"
     local repo_dirty="${REPO_DIRTY}"
+    local host_cpu="$(uname -m)"
 
     [ -d "${build_dir}" ] || return 1
     [ "${repo_dirty}" = "yes" ] && repo_modified="-modified"
 
     timestamp_utc="$(date -u -d "${timestamp}" '+%Y%m%d%H%M%S')"
-    repo_filename="${build_subdir}-${timestamp_utc}${repo_modified}.tar.xz"
+    repo_filename="${build_subdir}-${host_cpu}-${timestamp_utc}${repo_modified}.tar.xz"
     cached_path="${CACHED_DIR}/${repo_filename}"
     [ -z "${repo_modified}" ] && [ -f "${cached_path}" ] && return 0
 
