@@ -755,14 +755,16 @@ archive_build_directory()
     trap 'cleanup; exit 130' INT
     trap 'cleanup; exit 143' TERM
     trap 'cleanup' EXIT
-    tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" \
-        --exclude="${build_subdir}/src" \
-        --transform "s|^${build_subdir}|${build_subdir}+git-${repo_version}${repo_modified}|" \
-        -C "${PARENT_DIR}" "${build_subdir}" \
-        -cv | xz -zc -7e -T0 >"${temp_path}"
+    if ! tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" \
+            --exclude="${build_subdir}/src" \
+            --transform "s|^${build_subdir}|${build_subdir}+git-${repo_version}${repo_modified}|" \
+            -C "${PARENT_DIR}" "${build_subdir}" \
+            -cv | xz -zc -7e -T0 >"${temp_path}"; then
+        return 1
+    fi
 
-    touch -d "${timestamp}" "${temp_path}"
-    mv -f "${temp_path}" "${cached_path}"
+    touch -d "${timestamp}" "${temp_path}" || return 1
+    mv -f "${temp_path}" "${cached_path}" || return 1
     trap - EXIT INT TERM
 
     return 0
