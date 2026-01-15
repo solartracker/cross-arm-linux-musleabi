@@ -246,7 +246,7 @@ verify_hash() {
             return 1
         else
             # TODO: implement signature verify
-            IFS= read -r line <"${sign_path}" || exit 1
+            IFS= read -r line <"${sign_path}" || return 1
             expected=${line%%[[:space:]]*}
             if [ -z "${expected}" ]; then
                 echo "ERROR: Bad signature file: ${sign_path}"
