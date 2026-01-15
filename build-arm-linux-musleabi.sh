@@ -756,14 +756,13 @@ sign_archived_file() {
     trap 'cleanup; exit 143' TERM
     trap 'cleanup' EXIT
     temp_path=$(mktemp "${sign_path}.XXXXXX")
-    #{
-    #    printf '%s released %s\n' "${target_file}" "${now_localtime}"
-    #    printf '\n'
-    #    printf 'SHA256: %s\n' "${target_file_hash}"
-    #    printf '\n'
-    #
-    #} >"${temp_path}" || return 1
-    sha256sum "${target_path}" >"${temp_path}" || return 1
+    {
+        #printf '%s released %s\n' "${target_file}" "${now_localtime}"
+        #printf '\n'
+        #printf 'SHA256: %s\n' "${target_file_hash}"
+        #printf '\n'
+        printf '%s  %s\n' "${target_file_hash}" "${target_file}"
+    } >"${temp_path}" || return 1
     mv -f "${temp_path}" "${sign_path}" || return 1
     trap - EXIT INT TERM
 
