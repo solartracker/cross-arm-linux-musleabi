@@ -700,7 +700,13 @@ write_version_info() {
     local timestamp="$(git log -1 --format='@%ct')"
     local timestamp_utc="$(date -u -d "${timestamp}" '+%Y%m%d%H%M%S')"
     local timestamp_local="$(date -d "${timestamp}" '+%Y-%m-%d %H:%M:%S %Z %z')"
+    local temp_path=""
 
+    cleanup() { rm -f "${temp_path}"; }
+    trap 'cleanup; exit 130' INT
+    trap 'cleanup; exit 143' TERM
+    trap 'cleanup' EXIT
+    temp_path=$(mktemp "${VERSION_PATH}.XXXXXX")
     {
         printf '%s\n' '---------------------------------------------------------------'
         printf 'GIT_COMMIT             %s\n' "${repo_version}"
@@ -714,9 +720,13 @@ write_version_info() {
         printf '%s\n' "$(git diff)"
         printf '%s\n' '---------------------------------------------------------------'
         fi
-    } >"${VERSION_PATH}"
+    } >"${temp_path}" || return 1
+    mv -f "${temp_path}" "${VERSION_PATH}" || return 1
 
-    echo "${repo_version} ${timestamp} ${repo_dirty}" >"${BUILD_START_PATH}"
+    temp_path=$(mktemp "${BUILD_START_PATH}.XXXXXX")
+    echo "${repo_version} ${timestamp} ${repo_dirty}" >"${temp_path}" || return 1
+    mv -f "${temp_path}" "${BUILD_START_PATH}" || return 1
+    trap - EXIT INT TERM
 
     return 0
 }
@@ -731,6 +741,35 @@ append_version_info() {
     return 0
 }
 
+sign_archived_file() {
+    [ -n "$1" ]            || return 1
+
+    local target_path="$1"
+    local target_file="$(basename -- "${target_path}")"
+    local target_file_hash="$(sha256sum "${target_path}" | awk '{print $1}')"
+    local sign_path="${target_path}.sign"
+    local temp_path=""
+    local now_localtime="$(date '+%Y-%m-%d %H:%M:%S %Z %z')"
+
+    cleanup() { rm -f "${temp_path}"; }
+    trap 'cleanup; exit 130' INT
+    trap 'cleanup; exit 143' TERM
+    trap 'cleanup' EXIT
+    temp_path=$(mktemp "${sign_path}.XXXXXX")
+    #{
+    #    printf '%s released %s\n' "${target_file}" "${now_localtime}"
+    #    printf '\n'
+    #    printf 'SHA256: %s\n' "${target_file_hash}"
+    #    printf '\n'
+    #
+    #} >"${temp_path}" || return 1
+    sha256sum "${target_path}" >"${temp_path}" || return 1
+    mv -f "${temp_path}" "${sign_path}" || return 1
+    trap - EXIT INT TERM
+
+    return 0
+}
+
 archive_build_directory()
 ( # BEGIN sub-shell
     [ -n "$1" ]            || return 1
@@ -738,8 +777,8 @@ archive_build_directory()
 
     local repo_dir="$1"
     local build_dir="$2"
-    local repo_subdir="$(basename -- "$repo_dir")"
-    local build_subdir="$(basename -- "$build_dir")"
+    local repo_subdir="$(basename -- "${repo_dir}")"
+    local build_subdir="$(basename -- "${build_dir}")"
     local version_path="${build_dir}/VERSION"
     local repo_filename=""
     local repo_modified=""
@@ -776,6 +815,8 @@ archive_build_directory()
     touch -d "${timestamp}" "${temp_path}" || return 1
     mv -f "${temp_path}" "${cached_path}" || return 1
     trap - EXIT INT TERM
+
+    sign_archived_file "${cached_path}"
 
     return 0
 ) # END sub-shell
