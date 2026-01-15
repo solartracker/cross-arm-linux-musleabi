@@ -492,22 +492,22 @@ extract_package() {
 
     case "${source_path}" in
         *.tar.gz|*.tgz)
-            tar xzvf "${source_path}" -C "${target_dir}"
+            tar xzvf "${source_path}" -C "${target_dir}" || return 1
             ;;
         *.tar.bz2|*.tbz)
-            tar xjvf "${source_path}" -C "${target_dir}"
+            tar xjvf "${source_path}" -C "${target_dir}" || return 1
             ;;
         *.tar.xz|*.txz)
-            tar xJvf "${source_path}" -C "${target_dir}"
+            tar xJvf "${source_path}" -C "${target_dir}" || return 1
             ;;
         *.tar.lz|*.tlz)
-            tar xlvf "${source_path}" -C "${target_dir}"
+            tar xlvf "${source_path}" -C "${target_dir}" || return 1
             ;;
         *.tar.zst)
-            tar xvf "${source_path}" -C "${target_dir}"
+            tar xvf "${source_path}" -C "${target_dir}" || return 1
             ;;
         *.tar)
-            tar xvf "${source_path}" -C "${target_dir}"
+            tar xvf "${source_path}" -C "${target_dir}" || return 1
             ;;
         *)
             echo "Unsupported archive type: ${source_path}" >&2
@@ -528,20 +528,24 @@ unpack_archive()
     local dir_tmp=""
 
     if [ ! -d "${target_dir}" ]; then
-        cleanup() { rm -rf "${dir_tmp}"; }
+        cleanup() { rm -rf "${dir_tmp}" "${target_dir}"; }
         trap 'cleanup; exit 130' INT
         trap 'cleanup; exit 143' TERM
         trap 'cleanup' EXIT
         dir_tmp=$(mktemp -d "${target_dir}.XXXXXX")
         mkdir -p "${dir_tmp}"
-        if extract_package "${source_path}" "${dir_tmp}"; then
+        if ! extract_package "${source_path}" "${dir_tmp}"; then
+            return 1
+        else
             # try to rename single sub-directory
             if ! mv -f "${dir_tmp}"/* "${target_dir}"/; then
                 # otherwise, move multiple files and sub-directories
-                mkdir -p "${target_dir}"
-                mv -f "${dir_tmp}"/* "${target_dir}"/
+                mkdir -p "${target_dir}" || return 1
+                mv -f "${dir_tmp}"/* "${target_dir}"/ || return 1
             fi
         fi
+        rm -rf "${dir_tmp}" || return 1
+        trap - EXIT INT TERM
     fi
 
     return 0
