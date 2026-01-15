@@ -175,46 +175,85 @@ handle_configure_error() {
 # new directories: rwxr-xr-x (755)
 umask 022
 
+sign_file()
+( # BEGIN sub-shell
+    [ -n "$1" ]            || return 1
+
+    local target_path="$1"
+    local sign_path="${target_path}.sign"
+    local target_file="$(basename -- "${target_path}")"
+    local target_file_hash="$(sha256sum "${target_path}" | awk '{print $1}')"
+    local temp_path=""
+    local now_localtime="$(date '+%Y-%m-%d %H:%M:%S %Z %z')"
+
+    cleanup() { rm -f "${temp_path}"; }
+    trap 'cleanup; exit 130' INT
+    trap 'cleanup; exit 143' TERM
+    trap 'cleanup' EXIT
+    temp_path=$(mktemp "${sign_path}.XXXXXX")
+    {
+        #printf '%s released %s\n' "${target_file}" "${now_localtime}"
+        #printf '\n'
+        #printf 'SHA256: %s\n' "${target_file_hash}"
+        #printf '\n'
+        printf '%s  %s\n' "${target_file_hash}" "${target_file}"
+    } >"${temp_path}" || return 1
+    touch -r "${target_path}" "${temp_path}" || return 1
+    mv -f "${temp_path}" "${sign_path}" || return 1
+    # TODO: implement signing
+    trap - EXIT INT TERM
+
+    return 0
+) # END sub-shell
+
 # Checksum verification for downloaded file
 verify_hash() {
     [ -n "$1" ] || return 1
 
-    local file="$1"
+    local file_path="$1"
     local expected="$2"
     local option="$3"
     local actual=""
+    local sign_path="${file_path}.sign"
 
-    if [ ! -f "${file}" ]; then
-        echo "ERROR: File not found: ${file}"
+    if [ ! -f "${file_path}" ]; then
+        echo "ERROR: File not found: ${file_path}"
         return 1
     fi
 
     if [ -z "${option}" ]; then
         # hash the compressed binary file. this method is best when downloading
         # compressed binary files.
-        actual="$(sha256sum "${file}" | awk '{print $1}')"
+        actual="$(sha256sum "${file_path}" | awk '{print $1}')"
     elif [ "${option}" == "tar_extract" ]; then
         # hash the data, file names, directory names. this method is best when
         # archiving Github repos.
-        actual="$(tar -xJOf "${file}" | sha256sum | awk '{print $1}')"
+        actual="$(tar -xJOf "${file_path}" | sha256sum | awk '{print $1}')"
     elif [ "${option}" == "xz_extract" ]; then
         # hash the data, file names, directory names, timestamps, permissions, and
         # tar internal structures. this method is not as "future-proof" for archiving
         # Github repos because it is possible that the tar internal structures
         # could change over time as the tar implementations evolve.
-        actual="$(xz -dc "${file}" | sha256sum | awk '{print $1}')"
+        actual="$(xz -dc "${file_path}" | sha256sum | awk '{print $1}')"
     else
         return 1
     fi
 
+    if [ -z "${expected}" ]; then
+        if [ -f "${sign_path}" ]; then
+            read expected <"${sign_path}"
+            # TODO: implement signature verify
+        fi
+    fi
+
     if [ "${actual}" != "${expected}" ]; then
-        echo "ERROR: SHA256 mismatch for ${file}"
+        echo "ERROR: SHA256 mismatch for ${file_path}"
         echo "Expected: ${expected}"
         echo "Actual:   ${actual}"
         return 1
     fi
 
-    echo "SHA256 OK: ${file}"
+    echo "SHA256 OK: ${file_path}"
     return 0
 }
 
@@ -359,6 +398,7 @@ clone_github()
             mv -f "${temp_path}" "${cached_path}" || return 1
             rm -rf "${temp_dir}" || return 1
             trap - EXIT INT TERM
+            sign_file "${cached_path}"
         else
             cleanup() { rm -f "${cached_path}"; }
             trap 'cleanup; exit 130' INT
@@ -679,7 +719,8 @@ on_build_finished() {
     return 0
 }
 
-write_version_info() {
+write_version_info()
+( # BEGIN sub-shell
     [ -d "${CROSSBUILD_DIR}" ] || return 1
 
     cd "${SCRIPT_DIR}"
@@ -729,7 +770,7 @@ write_version_info() {
     trap - EXIT INT TERM
 
     return 0
-}
+) # END sub-shell
 
 append_version_info() {
     {
@@ -737,35 +778,6 @@ append_version_info() {
         printf 'BUILD_STOP_TIME        %s\n' "${BUILD_STOP_TIME}"
         printf '%s\n' '---------------------------------------------------------------'
     } >>"${VERSION_PATH}"
-
-    return 0
-}
-
-sign_archived_file() {
-    [ -n "$1" ]            || return 1
-
-    local target_path="$1"
-    local target_file="$(basename -- "${target_path}")"
-    local target_file_hash="$(sha256sum "${target_path}" | awk '{print $1}')"
-    local sign_path="${target_path}.sign"
-    local temp_path=""
-    local now_localtime="$(date '+%Y-%m-%d %H:%M:%S %Z %z')"
-
-    cleanup() { rm -f "${temp_path}"; }
-    trap 'cleanup; exit 130' INT
-    trap 'cleanup; exit 143' TERM
-    trap 'cleanup' EXIT
-    temp_path=$(mktemp "${sign_path}.XXXXXX")
-    {
-        #printf '%s released %s\n' "${target_file}" "${now_localtime}"
-        #printf '\n'
-        #printf 'SHA256: %s\n' "${target_file_hash}"
-        #printf '\n'
-        printf '%s  %s\n' "${target_file_hash}" "${target_file}"
-    } >"${temp_path}" || return 1
-    touch -r "${target_path}" "${temp_path}" || return 1
-    mv -f "${temp_path}" "${sign_path}" || return 1
-    trap - EXIT INT TERM
 
     return 0
 }
@@ -816,7 +828,7 @@ archive_build_directory()
     mv -f "${temp_path}" "${cached_path}" || return 1
     trap - EXIT INT TERM
 
-    sign_archived_file "${cached_path}"
+    sign_file "${cached_path}"
 
     return 0
 ) # END sub-shell
