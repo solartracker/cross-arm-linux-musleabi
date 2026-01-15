@@ -240,9 +240,16 @@ verify_hash() {
     fi
 
     if [ -z "${expected}" ]; then
-        if [ -f "${sign_path}" ]; then
-            read expected <"${sign_path}"
+        if [ ! -f "${sign_path}" ]; then
+            echo "ERROR: Signature file not found: ${sign_path}"
+            return 1
+        else
             # TODO: implement signature verify
+            read expected <"${sign_path}"
+            if [ -z "${expected}" ]; then
+                echo "ERROR: Bad signature file: ${sign_path}"
+                return 1
+            fi
         fi
     fi
 
