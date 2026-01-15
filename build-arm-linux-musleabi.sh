@@ -763,6 +763,7 @@ sign_archived_file() {
         #printf '\n'
         printf '%s  %s\n' "${target_file_hash}" "${target_file}"
     } >"${temp_path}" || return 1
+    touch -r "${target_path}" "${temp_path}" || return 1
     mv -f "${temp_path}" "${sign_path}" || return 1
     trap - EXIT INT TERM
 
