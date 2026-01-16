@@ -109,6 +109,7 @@ install_dependencies() {
         "libmpc-dev"
         "libisl-dev"
         "zlib1g-dev"
+        "cmake"
     )
     local to_install=()
 
