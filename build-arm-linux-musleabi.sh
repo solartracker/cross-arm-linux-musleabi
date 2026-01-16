@@ -602,15 +602,29 @@ unpack_archive()
 
 get_latest_package() {
     [ "$#" -eq 3 ] || return 1
-    local pattern="${1}${2}${3}"
-    local curr_dir="${PWD}"
-    cd ${CACHED_DIR}
-    local latest_file=$(ls ${pattern} 2>/dev/null | tail -n1)
-    cd "${curr_dir}"
-    [ -n "${latest_file}" ] || return 1
-    local version="${latest_file#${1}}"
-    version="${version%${3}}"
-    echo ${version}
+
+    local prefix=$1
+    local middle=$2
+    local suffix=$3
+    local pattern=${prefix}${middle}${suffix}
+    local latest=""
+    local version=""
+
+    (
+        cd "$CACHED_DIR" || return 1
+
+        set -- $pattern
+        [ "$1" != "$pattern" ] || return 1   # no matches
+
+        latest=$1
+        for f do
+            latest=$f
+        done
+
+        version=${latest#"$prefix"}
+        version=${version%"$suffix"}
+        printf '%s\n' "$version"
+    )
     return 0
 }
 
