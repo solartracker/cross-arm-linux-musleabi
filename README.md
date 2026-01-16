@@ -116,14 +116,10 @@ clean:
 	rm -f $(TARGET)
 ```
 
-## Common Pitfalls
+## Compile Smartmontools
 
-- Out-of-memory kills during GCC builds (add swap or reduce `-j`)
-- Thermal throttling on ARM boards
-- Mixing host headers or libraries into the sysroot
-- Expecting dynamically linked ARM binaries to run on the host
+Simple example for how to compile a program from source code that will run on any ARMv7 Linux device. This script will automatically download a toolchain from Github, so you can test the cross-compiler without building it yourself.
 
-## License
-
-GPL-3.0-or-later  
-Copyright © 2025 Richard Elwell
+```
+./smartmontools-arm-musleabi.sh
+```
