@@ -36,27 +36,43 @@ mkdir -p "${CROSSBUILD_DIR}"
 BUILD_START_PATH="${CROSSBUILD_DIR}/.build_start"
 VERSION_PATH="${CROSSBUILD_DIR}/VERSION"
 
-STAGEDIR="${CROSSBUILD_DIR}"
 SRC_ROOT="${CROSSBUILD_DIR}/src"
 mkdir -p "$SRC_ROOT"
 
-#export LDFLAGS="-L${STAGEDIR}/lib -Wl,--gc-sections"
-#export CPPFLAGS="-I${STAGEDIR}/include"
-#export CFLAGS="-O3 -march=armv7-a -mtune=cortex-a9 -fomit-frame-pointer -mabi=aapcs-linux -marm -msoft-float -mfloat-abi=soft -ffunction-sections -fdata-sections -pipe -Wall -fPIC -std=gnu99"
+export TARGET=arm-linux-musleabi
+
+export PREFIX="${CROSSBUILD_DIR}"
+export HOST=${TARGET}
+export SYSROOT="${PREFIX}/${TARGET}"
+export PATH="${PATH}:${PREFIX}/bin:${SYSROOT}/bin"
+
+CROSS_PREFIX=${TARGET}-
+export CC=${CROSS_PREFIX}gcc
+export AR=${CROSS_PREFIX}ar
+export RANLIB=${CROSS_PREFIX}ranlib
+export STRIP=${CROSS_PREFIX}strip
+
+export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
+export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
+export CFLAGS="-O3 -march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux -fomit-frame-pointer -ffunction-sections -fdata-sections -pipe -Wall -fPIC -std=gnu99"
+
+case "${HOST_CPU}" in
+    armv7l)
+        LDD="${SYSROOT}/lib/libc.so --list"
+        ;;
+    *)
+        LDD="ldd"
+        ;;
+esac
 
 MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
 #MAKE="make -j1"                                  # one job at a time
 
-#export PKG_CONFIG="pkg-config"
-#export PKG_CONFIG_LIBDIR="${STAGEDIR}/lib/pkgconfig"
-#unset PKG_CONFIG_PATH
+export PKG_CONFIG="pkg-config"
+export PKG_CONFIG_LIBDIR="${PREFIX}/lib/pkgconfig"
+unset PKG_CONFIG_PATH
 
-# sudo apt update && sudo apt install build-essential binutils bison flex texinfo gawk make perl patch file wget curl git libgmp-dev libmpfr-dev libmpc-dev libisl-dev zlib1g-dev
 
-export PREFIX="${CROSSBUILD_DIR}"
-export TARGET=arm-linux-musleabi
-export PATH="${PREFIX}/bin:${PATH}"
-SYSROOT="${PREFIX}/${TARGET}"
 
 ################################################################################
 # Host dependencies
@@ -1062,7 +1078,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     mkdir "${PKG_BUILD_SUBDIR}"
     cd "${PKG_BUILD_SUBDIR}"
 
-    export CROSS_COMPILE=${TARGET}-
+    export CROSS_COMPILE=${CROSS_PREFIX}
 
     ../${PKG_SOURCE_SUBDIR}/configure \
         --prefix="${SYSROOT}" \
