@@ -47,14 +47,6 @@ export SYSROOT="${PREFIX}/${TARGET}"
 export PATH="${PATH}:${PREFIX}/bin:${SYSROOT}/bin"
 
 CROSS_PREFIX=${TARGET}-
-export CC=${CROSS_PREFIX}gcc
-export AR=${CROSS_PREFIX}ar
-export RANLIB=${CROSS_PREFIX}ranlib
-export STRIP=${CROSS_PREFIX}strip
-
-export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
-export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
-export CFLAGS="-O3 -march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux -fomit-frame-pointer -ffunction-sections -fdata-sections -pipe -Wall -fPIC -std=gnu99"
 
 case "${HOST_CPU}" in
     armv7l)
@@ -67,10 +59,6 @@ esac
 
 MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
 #MAKE="make -j1"                                  # one job at a time
-
-export PKG_CONFIG="pkg-config"
-export PKG_CONFIG_LIBDIR="${PREFIX}/lib/pkgconfig"
-unset PKG_CONFIG_PATH
 
 
 
