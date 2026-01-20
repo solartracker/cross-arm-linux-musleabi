@@ -976,15 +976,15 @@ fi
 )
 
 ################################################################################
-# gcc-12.5.0 (bootstrap gcc)
+# gcc-15.2.0 (bootstrap gcc)
 (
 PKG_NAME=gcc
-PKG_VERSION=12.5.0
+PKG_VERSION=15.2.0
 PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
 PKG_SOURCE_URL="https://ftp.gnu.org/gnu/gcc/${PKG_NAME}-${PKG_VERSION}/${PKG_SOURCE}"
 PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
 PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build-bootstrap"
-PKG_HASH="71cd373d0f04615e66c5b5b14d49c1a4c1a08efa7b30625cd240b11bab4062b3"
+PKG_HASH="438fd996826b0c82485a29da03a72d71d6e3541a83ec702df4271f6fe025d24e"
 
 mkdir -p "${SRC_ROOT}/${PKG_NAME}" && cd "${SRC_ROOT}/${PKG_NAME}"
 
@@ -1023,10 +1023,10 @@ fi
 )
 
 ################################################################################
-# gcc-12.5.0 (bootstrap libgcc)
+# gcc-15.2.0 (bootstrap libgcc)
 (
 PKG_NAME=gcc
-PKG_VERSION=12.5.0
+PKG_VERSION=15.2.0
 PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
 PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build-bootstrap"
 
@@ -1044,15 +1044,15 @@ fi
 )
 
 ################################################################################
-# musl-1.2.4
+# musl-1.2.5
 (
 PKG_NAME=musl
-PKG_VERSION=1.2.4
+PKG_VERSION=1.2.5
 PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.gz"
 PKG_SOURCE_URL="https://musl.libc.org/releases/${PKG_SOURCE}"
 PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
 PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
-PKG_HASH="7a35eae33d5372a7c0da1188de798726f68825513b7ae3ebe97aaaa52114f039"
+PKG_HASH="a9a118bbe84d8764da0ea0d28b3ab3fae8477fc7e4085d90102b8596fc7c75e4"
 
 mkdir -p "${SRC_ROOT}/${PKG_NAME}" && cd "${SRC_ROOT}/${PKG_NAME}"
 
@@ -1083,15 +1083,15 @@ fi
 )
 
 ################################################################################
-# gcc-12.5.0 (final)
+# gcc-15.2.0 (final)
 (
 PKG_NAME=gcc
-PKG_VERSION=12.5.0
+PKG_VERSION=15.2.0
 PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
 PKG_SOURCE_URL="https://ftp.gnu.org/gnu/gcc/${PKG_NAME}-${PKG_VERSION}/${PKG_SOURCE}"
 PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
 PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build-final"
-PKG_HASH="71cd373d0f04615e66c5b5b14d49c1a4c1a08efa7b30625cd240b11bab4062b3"
+PKG_HASH="438fd996826b0c82485a29da03a72d71d6e3541a83ec702df4271f6fe025d24e"
 
 mkdir -p "${SRC_ROOT}/${PKG_NAME}" && cd "${SRC_ROOT}/${PKG_NAME}"
 
