@@ -1114,6 +1114,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
         --disable-multilib \
         --disable-nls \
         --disable-libsanitizer \
+        --disable-libstdcxx-futex \
     || handle_configure_error $?
 
     $MAKE
