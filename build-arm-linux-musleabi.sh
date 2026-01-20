@@ -910,15 +910,15 @@ echo ""
 set -x
 
 ################################################################################
-# binutils-2.40
+# binutils-2.45
 (
 PKG_NAME=binutils
-PKG_VERSION=2.40
+PKG_VERSION=2.45
 PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
 PKG_SOURCE_URL="https://ftp.gnu.org/gnu/binutils/${PKG_SOURCE}"
 PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
 PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
-PKG_HASH="0f8a4c272d7f17f369ded10a4aca28b8e304828e95526da482b0ccc4dfc9d8e1"
+PKG_HASH="c50c0e7f9cb188980e2cc97e4537626b1672441815587f1eab69d2a1bfbef5d2"
 
 mkdir -p "${SRC_ROOT}/${PKG_NAME}" && cd "${SRC_ROOT}/${PKG_NAME}"
 
