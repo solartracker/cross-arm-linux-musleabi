@@ -1110,11 +1110,11 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
         --prefix="${PREFIX}" \
         --with-sysroot="${SYSROOT}" \
         --enable-languages=c,c++ \
+        --enable-libstdcxx-futex \
         --enable-shared \
         --disable-multilib \
         --disable-nls \
         --disable-libsanitizer \
-        --disable-libstdcxx-futex \
     || handle_configure_error $?
 
     $MAKE
