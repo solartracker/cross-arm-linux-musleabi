@@ -30,6 +30,8 @@ set -x
 ################################################################################
 # General
 
+RELEASE_VERSION=0.2.0
+
 CROSSBUILD_DIR="${SCRIPT_DIR}-build"
 mkdir -p "${CROSSBUILD_DIR}"
 
@@ -814,6 +816,7 @@ write_version_info()
     temp_path=$(mktemp "${VERSION_PATH}.XXXXXX")
     {
         printf '%s\n' '---------------------------------------------------------------'
+        printf 'RELEASE_VERSION        %s\n' "${RELEASE_VERSION}"
         printf 'GIT_COMMIT             %s\n' "${repo_version}"
         printf 'GIT_COMMIT_TIME        %s\n' "${timestamp_local}"
         printf 'GIT_DIRTY              %s\n' "${repo_dirty}"
@@ -891,8 +894,13 @@ archive_build_directory()
     touch -d "${timestamp}" "${temp_path}" || return 1
     mv -f "${temp_path}" "${cached_path}" || return 1
     trap - EXIT INT TERM
+    sign_file "${cached_path}" # done
 
-    sign_file "${cached_path}"
+    # create link designed to behave just like the downloaded release asset
+    local release_filename="${repo_subdir}-${host_cpu}-${RELEASE_VERSION}.tar.xz"
+    local release_path="${CACHED_DIR}/${release_filename}"
+    ln -sfn "${repo_filename}" "${release_path}"
+    ln -sfn "${repo_filename}.sha256" "${release_path}.sha256"
 
     return 0
 ) # END sub-shell
