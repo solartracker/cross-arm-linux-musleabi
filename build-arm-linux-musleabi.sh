@@ -1115,8 +1115,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
         --disable-multilib \
         --disable-nls \
         --disable-libsanitizer \
-        --enable-option-checking \
-        --with-march=armv7-a --with-mtune=cortex-a9 --with-marm --with-mfloat-abi=soft --with-mabi=aapcs-linux \
+        --with-arch=armv7-a --with-tune=cortex-a9 --with-float=soft --with-abi=aapcs-linux \
         --enable-cxx-flags='-march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux' \
     || handle_configure_error $?
 
