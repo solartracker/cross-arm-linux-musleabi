@@ -920,7 +920,8 @@ PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
 PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
 PKG_HASH="c50c0e7f9cb188980e2cc97e4537626b1672441815587f1eab69d2a1bfbef5d2"
 
-mkdir -p "${SRC_ROOT}/${PKG_NAME}" && cd "${SRC_ROOT}/${PKG_NAME}"
+mkdir -p "${SRC_ROOT}/${PKG_NAME}"
+cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     on_build_started
@@ -957,7 +958,8 @@ PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
 PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
 PKG_HASH="70d124743041974e1220fb39465627ded1df0fdd46da6cd74f6e3da414194d03"
 
-mkdir -p "${SRC_ROOT}/${PKG_NAME}" && cd "${SRC_ROOT}/${PKG_NAME}"
+mkdir -p "${SRC_ROOT}/${PKG_NAME}"
+cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     on_build_started
@@ -986,7 +988,8 @@ PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
 PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build-bootstrap"
 PKG_HASH="438fd996826b0c82485a29da03a72d71d6e3541a83ec702df4271f6fe025d24e"
 
-mkdir -p "${SRC_ROOT}/${PKG_NAME}" && cd "${SRC_ROOT}/${PKG_NAME}"
+mkdir -p "${SRC_ROOT}/${PKG_NAME}"
+cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed__gcc" ]; then
     on_build_started
@@ -1034,6 +1037,7 @@ cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed__libgcc" ]; then
     on_build_started
+
     cd "${PKG_BUILD_SUBDIR}"
 
     $MAKE all-target-libgcc
@@ -1054,7 +1058,8 @@ PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
 PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
 PKG_HASH="a9a118bbe84d8764da0ea0d28b3ab3fae8477fc7e4085d90102b8596fc7c75e4"
 
-mkdir -p "${SRC_ROOT}/${PKG_NAME}" && cd "${SRC_ROOT}/${PKG_NAME}"
+mkdir -p "${SRC_ROOT}/${PKG_NAME}"
+cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     on_build_started
@@ -1087,19 +1092,13 @@ fi
 (
 PKG_NAME=gcc
 PKG_VERSION=15.2.0
-PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
-PKG_SOURCE_URL="https://ftp.gnu.org/gnu/gcc/${PKG_NAME}-${PKG_VERSION}/${PKG_SOURCE}"
 PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
 PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build-final"
-PKG_HASH="438fd996826b0c82485a29da03a72d71d6e3541a83ec702df4271f6fe025d24e"
 
-mkdir -p "${SRC_ROOT}/${PKG_NAME}" && cd "${SRC_ROOT}/${PKG_NAME}"
+cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     on_build_started
-    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
-    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
-    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
 
     rm -rf "${PKG_BUILD_SUBDIR}"
     mkdir "${PKG_BUILD_SUBDIR}"
