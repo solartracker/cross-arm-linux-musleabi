@@ -12,6 +12,7 @@ Build a reproducible ARMv7 musl-based cross-compiler entirely from source.
 - libc: musl
 - Languages: C, C++
 - Raspberry Pi 3B build time: ~4 hours
+- Intel Xeon E-2276M build time: <20 minutes
 
 ## Target Overview
 
@@ -22,12 +23,13 @@ Build a reproducible ARMv7 musl-based cross-compiler entirely from source.
 
 ## What the Script Builds
 
-1. binutils 2.40  
-2. Linux kernel headers 2.6.36.4  
-3. GCC 12.5.0 (bootstrap compiler)  
-4. libgcc (bootstrap)  
-5. musl libc 1.2.4  
-6. GCC 12.5.0 (final compiler with C and C++ support)
+1. binutils 2.45
+2. Linux kernel headers 2.6.36.4
+3. GCC 15.2.0 (bootstrap compiler)
+4. libgcc (bootstrap)
+5. musl libc 1.2.5
+6. GCC 15.2.0 (final compiler with C and C++ support)
+7. GCC configured with settings matching my CPU (--with-arch=armv7-a --with-tune=cortex-a9 --with-float=soft --with-abi=aapcs-linux)
 
 All sources are verified using SHA-256 checksums and cached locally.
 
@@ -47,7 +49,7 @@ sudo apt install     build-essential     binutils     bison     flex     texinfo
 On a **Raspberry Pi 3 Model B**, a clean build took approximately **4 hours** and required:
 
 - SSD-based storage
-- 2 GB swap file
+- 10 GB swap file (just in case)
 - Adequate cooling
 
 Build times on modern x86_64 systems are significantly shorter.
