@@ -716,11 +716,11 @@ export AR=${CROSS_PREFIX}ar
 export RANLIB=${CROSS_PREFIX}ranlib
 export STRIP=${CROSS_PREFIX}strip
 
-export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
-export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
 CFLAGS_COMMON="-O3 -march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux -fomit-frame-pointer -ffunction-sections -fdata-sections -pipe -Wall -fPIC"
 export CFLAGS="${CFLAGS_COMMON} -std=gnu99"
 export CXXFLAGS="${CFLAGS_COMMON} -std=gnu++17"
+export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
+export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
 
 case "${HOST_CPU}" in
     armv7l)
@@ -731,8 +731,6 @@ case "${HOST_CPU}" in
         ;;
 esac
 
-#STAGEDIR="${CROSSBUILD_DIR}"
-#mkdir -p "${STAGEDIR}"
 SRC_ROOT="${CROSSBUILD_DIR}/src/${PKG_ROOT}"
 mkdir -p "${SRC_ROOT}"
 
