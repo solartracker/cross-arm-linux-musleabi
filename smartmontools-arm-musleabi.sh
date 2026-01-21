@@ -57,7 +57,7 @@ sign_file()
 
     local target_path="$1"
     local option="$2"
-    local sign_path="$(readlink -f "${target_path}").sign"
+    local sign_path="$(readlink -f "${target_path}").sha256"
     local target_file="$(basename -- "${target_path}")"
     local target_file_hash=""
     local temp_path=""
@@ -108,7 +108,7 @@ verify_hash() {
     local expected="$2"
     local option="$3"
     local actual=""
-    local sign_path="$(readlink -f "${file_path}").sign"
+    local sign_path="$(readlink -f "${file_path}").sha256"
     local line=""
 
     if [ ! -f "${file_path}" ]; then
@@ -158,6 +158,18 @@ verify_hash() {
 
     echo "SHA256 OK: ${file_path}"
     return 0
+}
+
+# the signature file is just a checksum hash
+signature_file_exists() {
+    [ -n "$1" ] || return 1
+    local file_path="$1"
+    local sign_path="$(readlink -f "${file_path}").sha256"
+    if [ -f "${sign_path}" ]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 retry() {
@@ -610,9 +622,10 @@ finalize_build() {
     return 0
 }
 
+
 ################################################################################
 # Install the build environment
-# ARM Linux musl Cross-Compiler v0.1.0
+# ARM Linux musl Cross-Compiler v0.2.0
 #
 CROSSBUILD_SUBDIR="cross-arm-linux-musleabi-build"
 CROSSBUILD_DIR="${PARENT_DIR}/${CROSSBUILD_SUBDIR}"
@@ -622,27 +635,37 @@ PKG_NAME=cross-arm-linux-musleabi
 HOST_CPU="$(uname -m)"
 get_latest() { get_latest_package "${PKG_NAME}-${HOST_CPU}-" "??????????????" ".tar.xz"; }
 #PKG_VERSION="$(get_latest)" # this line will fail if you did not build a toolchain yourself
-PKG_VERSION=0.1.0 # this line will cause a toolchain to be downloaded from Github
+PKG_VERSION=0.2.0 # this line will cause a toolchain to be downloaded from Github
 PKG_SOURCE="${PKG_NAME}-${HOST_CPU}-${PKG_VERSION}.tar.xz"
 PKG_SOURCE_URL="https://github.com/solartracker/${PKG_NAME}/releases/download/${PKG_VERSION}/${PKG_SOURCE}"
 PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
 PKG_SOURCE_PATH="${CACHED_DIR}/${PKG_SOURCE}"
 
-if [ $(expr length "$PKG_VERSION") -eq 14 ]; then
-    # use an archived toolchain that you built yourself. the version number is a 14 digit timestamp.
-    # Example: cross-arm-linux-musleabi-armv7l-20260115045834.tar.xz
+if signature_file_exists "${PKG_SOURCE_PATH}"; then
+    # use an archived toolchain that you built yourself, along with a signature
+    # file that was created automatically.  the version number is a 14 digit
+    # timestamp and a symbolic link was automatically created for the release
+    # asset that would normally have been downloaded. all this is done for you
+    # by the toolchain build script: build-arm-linux-musleabi.sh
+    #
+    # Example of what your sources directory might look like:
+    # cross-arm-linux-musleabi-armv7l-20260120150840.tar.xz
+    # cross-arm-linux-musleabi-armv7l-20260120150840.tar.xz.sha256
+    # cross-arm-linux-musleabi-armv7l-0.2.0.tar.xz -> cross-arm-linux-musleabi-armv7l-20260120150840.tar.xz
+    # cross-arm-linux-musleabi-armv7l-0.2.0.tar.xz.sha256 -> cross-arm-linux-musleabi-armv7l-20260120150840.tar.xz.sha256
+    #
     PKG_HASH=""
 else
     # alternatively, the toolchain can be downloaded from Github. note that the version
     # number is the Github tag, instead of a 14 digit timestamp.
     case "${HOST_CPU}" in
         armv7l)
-            # cross-arm-linux-musleabi-armv7l-0.1.0.tar.xz
-            PKG_HASH="5c8f54f146082775cebd8d77624c4c4f3bb1b38c9a4dea01916453df029e9c48"
+            # cross-arm-linux-musleabi-armv7l-0.2.0.tar.xz
+            PKG_HASH="db200a801420d21b5328c9005225bb0fa822b612c6b67b3da58c397458238634"
             ;;
         x86_64)
-            # cross-arm-linux-musleabi-x86_64-0.1.0.tar.xz
-            PKG_HASH="224113b04fd1d20ebf75f2016b2b623fb619db2bf3db0c5cba2ee8449847d9e4"
+            # cross-arm-linux-musleabi-x86_64-0.2.0.tar.xz
+            PKG_HASH="9a303a9978ff8d590394bccf2a03890ccb129916347dcdd66dc7780ea7826d9b"
             ;;
         *)
             echo "Unsupported CPU architecture: "${HOST_CPU} >&2
@@ -683,9 +706,9 @@ fi
 PKG_ROOT=smartmontools
 
 export PREFIX="${CROSSBUILD_DIR}"
-export PATH="${CROSSBUILD_DIR}/bin:${CROSSBUILD_DIR}/${TARGET}/bin:${PATH}"
 export HOST=${TARGET}
 export SYSROOT="${PREFIX}/${TARGET}"
+export PATH="${PATH}:${PREFIX}/bin:${SYSROOT}/bin"
 
 CROSS_PREFIX=${TARGET}-
 export CC=${CROSS_PREFIX}gcc
@@ -695,7 +718,9 @@ export STRIP=${CROSS_PREFIX}strip
 
 export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
 export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
-export CFLAGS="-O3 -march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux -fomit-frame-pointer -ffunction-sections -fdata-sections -pipe -Wall -fPIC -std=gnu99"
+CFLAGS_COMMON="-O3 -march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux -fomit-frame-pointer -ffunction-sections -fdata-sections -pipe -Wall -fPIC"
+export CFLAGS="${CFLAGS_COMMON} -std=gnu99"
+export CXXFLAGS="${CFLAGS_COMMON} -std=gnu++17"
 
 case "${HOST_CPU}" in
     armv7l)
