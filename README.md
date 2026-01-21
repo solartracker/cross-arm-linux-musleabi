@@ -121,5 +121,8 @@ clean:
 Simple example for how to compile a program from source code that will run on any ARMv7 Linux device. This script will automatically download a toolchain from Github, so you can test the cross-compiler without building it yourself.
 
 ```
-./smartmontools-arm-musleabi.sh
+cd
+git clone https://github.com/solartracker/smartmontools-arm-static
+cd smartmontools-arm-static
+./smartmontools-arm-musl.sh
 ```
