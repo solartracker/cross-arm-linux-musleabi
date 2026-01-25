@@ -334,11 +334,20 @@ wget_clean() {
     rm -f "${temp_path}"
     if ! wget -O "${temp_path}" --tries=9 --retry-connrefused --waitretry=5 "${source_url}"; then
         rm -f "${temp_path}"
-        return 1
-    else
-        if ! mv -f "${temp_path}" "${target_path}"; then
-            rm -f "${temp_path}" "${target_path}"
+        if [ -f "${target_path}" ]; then
+            return 0
+        else
             return 1
+        fi
+    else
+        if [ -f "${target_path}" ]; then
+            rm -f "${temp_path}"
+            return 0
+        else
+            if ! mv -f "${temp_path}" "${target_path}"; then
+                rm -f "${temp_path}" "${target_path}"
+                return 1
+            fi
         fi
     fi
 
