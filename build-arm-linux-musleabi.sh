@@ -332,7 +332,7 @@ wget_clean() {
     local target_path="$3"
 
     rm -f "${temp_path}"
-    if ! wget -O "${temp_path}" --tries=9 --retry-connrefused --waitretry=5 "${source_url}"; then
+    if ! wget -O "${temp_path}" --tries=1 --retry-connrefused --waitretry=5 "${source_url}"; then
         rm -f "${temp_path}"
         if [ -f "${target_path}" ]; then
             return 0
@@ -376,7 +376,7 @@ download()
             trap 'cleanup; exit 143' TERM
             trap 'cleanup' EXIT
             temp_path=$(mktemp "${cached_path}.XXXXXX")
-            if ! retry 100 wget_clean "${temp_path}" "${source_url}" "${cached_path}"; then
+            if ! retry 1000 wget_clean "${temp_path}" "${source_url}" "${cached_path}"; then
                 return 1
             fi
             trap - EXIT INT TERM
