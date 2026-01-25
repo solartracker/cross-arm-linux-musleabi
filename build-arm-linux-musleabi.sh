@@ -1235,6 +1235,49 @@ fi
 )
 
 ################################################################################
+# gdb-17.1 (cross-gdb for arm-linux-musleabi)
+(
+PKG_NAME=gdb
+PKG_VERSION=17.1
+PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
+PKG_SOURCE_URL="https://ftp.gnu.org/gnu/gdb/${PKG_SOURCE}"
+PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
+PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
+PKG_HASH="14996f5f74c9f68f5a543fdc45bca7800207f91f92aeea6c2e791822c7c6d876"
+
+mkdir -p "${SRC_ROOT}/${PKG_NAME}"
+cd "${SRC_ROOT}/${PKG_NAME}"
+
+if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
+    on_build_started
+    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
+    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
+    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
+
+    rm -rf "${PKG_BUILD_SUBDIR}"
+    mkdir "${PKG_BUILD_SUBDIR}"
+    cd "${PKG_BUILD_SUBDIR}"
+
+    ../${PKG_SOURCE_SUBDIR}/configure \
+        --target=${TARGET} \
+        --prefix="${PREFIX}" \
+        --with-sysroot="${SYSROOT}" \
+        --enable-year2038 \
+        --disable-nls \
+        --disable-werror \
+        --with-expat \
+        --with-python=no \
+    || handle_configure_error $?
+
+    $MAKE
+    make install
+
+    touch "__package_installed"
+fi
+)
+exit 1
+
+################################################################################
 # Done compiling the toolchain
 #
 on_build_finished
