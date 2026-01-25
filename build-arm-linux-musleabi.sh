@@ -224,6 +224,7 @@ sign_file()
         #printf '\n'
         printf '%s  %s\n' "${target_file_hash}" "${target_file}"
     } >"${temp_path}" || return 1
+    chmod --reference="${target_path}" "${temp_path}" || return 1
     touch -r "${target_path}" "${temp_path}" || return 1
     mv -f "${temp_path}" "${sign_path}" || return 1
     # TODO: implement signing
@@ -290,6 +291,18 @@ verify_hash() {
 
     echo "SHA256 OK: ${file_path}"
     return 0
+}
+
+# the signature file is just a checksum hash
+signature_file_exists() {
+    [ -n "$1" ] || return 1
+    local file_path="$1"
+    local sign_path="$(readlink -f "${file_path}").sha256"
+    if [ -f "${sign_path}" ]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 retry() {
@@ -654,6 +667,16 @@ get_latest_package() {
     return 0
 }
 
+contains() {
+    haystack=$1
+    needle=$2
+
+    case $haystack in
+        *"$needle"*) return 0 ;;
+        *)           return 1 ;;
+    esac
+}
+
 is_version_git() {
     case "$1" in
         *+git*)
@@ -741,6 +764,83 @@ finalize_build() {
 
     return 0
 }
+
+# temporarily hide shared libraries (.so) to force cmake to use the static ones (.a)
+hide_shared_libraries() {
+    mv "${PREFIX}/lib_hidden/"* "${PREFIX}/lib/" || true
+    mkdir "${PREFIX}/lib_hidden" || true
+    mv "${PREFIX}/lib/"*".so"* "${PREFIX}/lib_hidden/" || true
+    mv "${PREFIX}/lib_hidden/libcc1."* "${PREFIX}/lib/" || true
+    return 0
+}
+
+# restore the hidden shared libraries
+restore_shared_libraries() {
+    mv "${PREFIX}/lib_hidden/"* "${PREFIX}/lib/" || true
+    rmdir "${PREFIX}/lib_hidden" || true
+    return 0
+}
+
+create_install_package()
+( # BEGIN sub-shell
+    [ "$#" -gt 0 ] || return 1
+    [ -n "$PKG_ROOT" ]            || return 1
+    [ -n "$PKG_ROOT_VERSION" ]    || return 1
+    [ -n "$PKG_ROOT_RELEASE" ]    || return 1
+    [ -n "$PKG_TARGET_CPU" ]      || return 1
+    [ -n "$CACHED_DIR" ]          || return 1
+
+    local pkg_files=""
+    for fmt in gz xz; do
+        local pkg_file="${PKG_ROOT}_${PKG_ROOT_VERSION}-${PKG_ROOT_RELEASE}_${PKG_TARGET_CPU}.tar.${fmt}"
+        local pkg_path="${CACHED_DIR}/${pkg_file}"
+        local temp_path=""
+        local timestamp=""
+        local compressor=""
+
+        case "$fmt" in
+            gz) compressor="gzip -9 -n" ;;
+            xz) compressor="xz -zc -7e -T0" ;;
+        esac
+
+        echo "[*] Creating the install package..."
+        mkdir -p "${CACHED_DIR}"
+        rm -f "${pkg_path}"
+        rm -f "${pkg_path}.sha256"
+        cleanup() { rm -f "${temp_path}"; }
+        trap 'cleanup; exit 130' INT
+        trap 'cleanup; exit 143' TERM
+        trap 'cleanup' EXIT
+        temp_path=$(mktemp "${pkg_path}.XXXXXX")
+        timestamp="@$(stat -c %Y "${PREFIX}/${1}")"
+        if ! tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" \
+                --transform "s|^|${PKG_ROOT}-${PKG_ROOT_VERSION}/|" \
+                -C "${PREFIX}" "$@" \
+                -cv | ${compressor} >"${temp_path}"; then
+            return 1
+        fi
+        touch -d "${timestamp}" "${temp_path}" || return 1
+        chmod 644 "${temp_path}" || return 1
+        mv -f "${temp_path}" "${pkg_path}" || return 1
+        trap - EXIT INT TERM
+        sign_file "${pkg_path}"
+
+        pkg_files="${pkg_files}${pkg_path}\n"
+    done
+
+    echo ""
+    echo ""
+    echo "[*] Finished."
+    echo ""
+    echo ""
+    echo "Install package is here:"
+    echo "${pkg_files}"
+    echo ""
+    echo ""
+
+    return 0
+) # END sub-shell
+
 
 ################################################################################
 # Archive build directory
@@ -892,6 +992,7 @@ archive_build_directory()
     fi
 
     touch -d "${timestamp}" "${temp_path}" || return 1
+    chmod 644 "${temp_path}" || return 1
     mv -f "${temp_path}" "${cached_path}" || return 1
     trap - EXIT INT TERM
     sign_file "${cached_path}" # done
