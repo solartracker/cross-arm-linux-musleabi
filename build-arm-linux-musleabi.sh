@@ -1166,14 +1166,14 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
 
     rm -rf "${PREFIX}/lib/"*".so"*
 
-    # strip and verify statically-linked
-    CROSS_PREFIX=""
-    finalize_build "${PREFIX}/bin/xz"
+    ## strip and verify statically-linked
+    #CROSS_PREFIX=""
+    #finalize_build "${PREFIX}/bin/xz"
 
-    # install the program
-    mkdir -p "${PREFIX_TOOLCHAIN}/bin/"
-    cp -p "${PREFIX}/bin/xz" "${PREFIX_TOOLCHAIN}/bin/"
-    cp -p "${PREFIX}/bin/lzma" "${PREFIX_TOOLCHAIN}/bin/"
+    ## install the program
+    #mkdir -p "${PREFIX_TOOLCHAIN}/bin/"
+    #cp -p "${PREFIX}/bin/xz" "${PREFIX_TOOLCHAIN}/bin/"
+    #cp -p "${PREFIX}/bin/lzma" "${PREFIX_TOOLCHAIN}/bin/"
 
     touch "../${PKG_BUILD_SUBDIR}/__package_installed"
 fi
