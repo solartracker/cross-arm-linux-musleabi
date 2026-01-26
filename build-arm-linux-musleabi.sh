@@ -62,6 +62,10 @@ esac
 MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
 #MAKE="make -j1"                                  # one job at a time
 
+export PKG_CONFIG="pkg-config"
+export PKG_CONFIG_LIBDIR="${PREFIX}/lib/pkgconfig"
+unset PKG_CONFIG_PATH
+
 
 
 ################################################################################
