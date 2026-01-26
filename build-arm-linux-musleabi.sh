@@ -1049,6 +1049,7 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
 
     ./configure \
         --prefix="${PREFIX}" \
+        --static \
     || handle_configure_error $?
 
     $MAKE
@@ -1110,6 +1111,8 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
         --enable-year2038 \
         --enable-static \
         --disable-shared \
+        --disable-assembler \
+        --disable-dependency-tracking \
         --disable-nls \
         --disable-rpath \
         --disable-scripts \
@@ -1154,7 +1157,7 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
     cd "${PKG_SOURCE_SUBDIR}"
 
-    $MAKE zstd \
+    $MAKE lib \
         LDFLAGS="-static ${LDFLAGS}" \
         CFLAGS="${CFLAGS}" \
         LIBS="${PREFIX}/lib/libz.a ${PREFIX}/lib/liblzma.a ${PREFIX}/lib/liblz4.a"
@@ -1162,7 +1165,7 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     make install
 
     # strip and verify there are no dependencies for static build
-    finalize_build "${PREFIX}/bin/zstd"
+    #finalize_build "${PREFIX}/bin/zstd"
 
     touch __package_installed
 fi
