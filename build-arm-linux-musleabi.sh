@@ -1061,7 +1061,6 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
 
     ../${PKG_SOURCE_SUBDIR}/configure \
         --prefix="${PREFIX}" \
-        --static \
     || handle_configure_error $?
 
     $MAKE
