@@ -1535,11 +1535,16 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     export PKG_CONFIG_LIBDIR="${PREFIX}/lib/pkgconfig"
     unset PKG_CONFIG_PATH
 
-    ../${PKG_SOURCE_SUBDIR}/gdbserver/configure \
+    ../${PKG_SOURCE_SUBDIR}/configure \
         --prefix="${PREFIX}" \
         --host="${HOST}" \
-        --enable-threading=yes \
-        --disable-rpath \
+        --enable-year2038 \
+        --enable-gdbserver \
+        --disable-gdb \
+        --disable-sim \
+        --disable-ld \
+        --disable-gas \
+        --disable-binutils \
         --disable-nls \
         --disable-werror \
         --disable-unit-tests \
