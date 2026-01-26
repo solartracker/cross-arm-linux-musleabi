@@ -1432,6 +1432,9 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
 
     export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
     export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
+    export PKG_CONFIG="pkg-config"
+    export PKG_CONFIG_LIBDIR="${STAGE}/lib/pkgconfig"
+    unset PKG_CONFIG_PATH
 
     ../${PKG_SOURCE_SUBDIR}/configure \
         --target=${TARGET} \
