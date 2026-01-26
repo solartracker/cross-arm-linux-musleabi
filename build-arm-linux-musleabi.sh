@@ -1061,6 +1061,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
 
     ../${PKG_SOURCE_SUBDIR}/configure \
         --prefix="${PREFIX}" \
+        --static \
     || handle_configure_error $?
 
     $MAKE
@@ -1093,6 +1094,8 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
     cd "${PKG_SOURCE_SUBDIR}"
 
+    PREFIX_TOOLCHAIN="${PREFIX}"
+
     export PREFIX="${STAGE}"
     export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
     export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
@@ -1102,6 +1105,12 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     make install PREFIX=${PREFIX}
 
     rm -rf "${PREFIX}/lib/"*".so"*
+
+    # strip and verify statically-linked 
+    finalize_build "${PREFIX}/bin/lz4"
+
+    # install the program
+    cp -p "${PREFIX}/bin/lz4" "${PREFIX_TOOLCHAIN}/bin/"
 
     touch __package_installed
 fi
@@ -1131,6 +1140,8 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     mkdir "${PKG_BUILD_SUBDIR}"
     cd "${PKG_BUILD_SUBDIR}"
 
+    PREFIX_TOOLCHAIN="${PREFIX}"
+
     export PREFIX="${STAGE}"
     export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
     export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
@@ -1152,6 +1163,13 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     make install
 
     rm -rf "${PREFIX}/lib/"*".so"*
+
+    # strip and verify statically-linked
+    finalize_build "${PREFIX}/bin/xz"
+
+    # install the program
+    cp -p "${PREFIX}/bin/xz" "${PREFIX_TOOLCHAIN}/bin/"
+    cp -p "${PREFIX}/bin/lzma" "${PREFIX_TOOLCHAIN}/bin/"
 
     touch "../${PKG_BUILD_SUBDIR}/__package_installed"
 fi
@@ -1178,6 +1196,8 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
     cd "${PKG_SOURCE_SUBDIR}"
 
+    PREFIX_TOOLCHAIN="${PREFIX}"
+
     export PREFIX="${STAGE}"
     export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
     export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
@@ -1190,6 +1210,12 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     make install
 
     rm -rf "${PREFIX}/lib/"*".so"*
+
+    # strip and verify statically-linked
+    finalize_build "${PREFIX}/bin/zstd"
+
+    # install the program
+    cp -p "${PREFIX}/bin/zstd" "${PREFIX_TOOLCHAIN}/bin/"
 
     touch __package_installed
 fi
