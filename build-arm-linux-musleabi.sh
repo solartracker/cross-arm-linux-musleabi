@@ -1266,18 +1266,19 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
     cd "${PKG_SOURCE_SUBDIR}"
 
-    export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
-    export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
+    export PREFIX="${STAGE}"
+    export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
 
     ./configure \
-        --prefix="${STAGE}" \
+        --prefix="${PREFIX}" \
         --static \
     || handle_configure_error $?
 
     $MAKE
     make install
 
-    rm -rf "${STAGE}/lib/"*".so"*
+    rm -rf "${PREFIX}/lib/"*".so"*
 
     touch __package_installed
 fi
@@ -1303,14 +1304,15 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
     cd "${PKG_SOURCE_SUBDIR}"
 
-    export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
-    export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
+    export PREFIX="${STAGE}"
+    export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
 
     make clean || true
     $MAKE lib
-    make install PREFIX=${STAGE}
+    make install PREFIX=${PREFIX}
 
-    rm -rf "${STAGE}/lib/"*".so"*
+    rm -rf "${PREFIX}/lib/"*".so"*
 
     touch __package_installed
 fi
@@ -1336,8 +1338,9 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
     cd "${PKG_SOURCE_SUBDIR}"
 
-    export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
-    export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
+    export PREFIX="${STAGE}"
+    export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
 
     ./configure \
         --enable-year2038 \
@@ -1349,13 +1352,13 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
         --disable-rpath \
         --disable-scripts \
         --disable-doc \
-        --prefix="${STAGE}" \
+        --prefix="${PREFIX}" \
     || handle_configure_error $?
 
     $MAKE
     make install
 
-    rm -rf "${STAGE}/lib/"*".so"*
+    rm -rf "${PREFIX}/lib/"*".so"*
 
     touch __package_installed
 fi
@@ -1390,17 +1393,18 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
     cd "${PKG_SOURCE_SUBDIR}"
 
-    export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
-    export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
+    export PREFIX="${STAGE}"
+    export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
 
     $MAKE zstd \
         LDFLAGS="-static ${LDFLAGS}" \
         CPPFLAGS="${CPPFLAGS}"
-        LIBS="${STAGE}/lib/libz.a ${STAGE}/lib/liblzma.a ${STAGE}/lib/liblz4.a"
+        LIBS="${PREFIX}/lib/libz.a ${PREFIX}/lib/liblzma.a ${PREFIX}/lib/liblz4.a"
 
     make install
 
-    rm -rf "${STAGE}/lib/"*".so"*
+    rm -rf "${PREFIX}/lib/"*".so"*
 
     touch __package_installed
 fi
