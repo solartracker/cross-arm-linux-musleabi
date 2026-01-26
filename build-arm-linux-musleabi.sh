@@ -1107,9 +1107,11 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     rm -rf "${PREFIX}/lib/"*".so"*
 
     # strip and verify statically-linked 
+    CROSS_PREFIX=""
     finalize_build "${PREFIX}/bin/lz4"
 
     # install the program
+    mkdir -p "${PREFIX_TOOLCHAIN}/bin/"
     cp -p "${PREFIX}/bin/lz4" "${PREFIX_TOOLCHAIN}/bin/"
 
     touch __package_installed
@@ -1165,9 +1167,11 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     rm -rf "${PREFIX}/lib/"*".so"*
 
     # strip and verify statically-linked
+    CROSS_PREFIX=""
     finalize_build "${PREFIX}/bin/xz"
 
     # install the program
+    mkdir -p "${PREFIX_TOOLCHAIN}/bin/"
     cp -p "${PREFIX}/bin/xz" "${PREFIX_TOOLCHAIN}/bin/"
     cp -p "${PREFIX}/bin/lzma" "${PREFIX_TOOLCHAIN}/bin/"
 
@@ -1212,9 +1216,11 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     rm -rf "${PREFIX}/lib/"*".so"*
 
     # strip and verify statically-linked
+    CROSS_PREFIX=""
     finalize_build "${PREFIX}/bin/zstd"
 
     # install the program
+    mkdir -p "${PREFIX_TOOLCHAIN}/bin/"
     cp -p "${PREFIX}/bin/zstd" "${PREFIX_TOOLCHAIN}/bin/"
 
     touch __package_installed
