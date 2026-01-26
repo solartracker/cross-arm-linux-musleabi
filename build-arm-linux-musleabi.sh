@@ -1268,6 +1268,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
         --enable-objcopy \
         --disable-nls \
         --disable-werror \
+        ac_cv_prog_with_compressed_debug_sections=yes \
     || handle_configure_error $?
 
     $MAKE
