@@ -62,6 +62,8 @@ esac
 MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
 #MAKE="make -j1"                                  # one job at a time
 
+STAGE="${PREFIX}/stage"
+mkdir -p "${STAGE}"
 
 
 ################################################################################
@@ -1047,15 +1049,18 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
     cd "${PKG_SOURCE_SUBDIR}"
 
+    export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
+
     ./configure \
-        --prefix="${PREFIX}" \
+        --prefix="${STAGE}" \
         --static \
     || handle_configure_error $?
 
     $MAKE
     make install
 
-    rm -rf "${PREFIX}/lib/"*".so"* "${PREFIX}/bin" "${PREFIX}/share"
+    rm -rf "${STAGE}/lib/"*".so"*
 
     touch __package_installed
 fi
@@ -1081,11 +1086,14 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
     cd "${PKG_SOURCE_SUBDIR}"
 
+    export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
+
     make clean || true
     $MAKE lib
-    make install PREFIX=${PREFIX}
+    make install PREFIX=${STAGE}
 
-    rm -rf "${PREFIX}/lib/"*".so"* "${PREFIX}/bin" "${PREFIX}/share"
+    rm -rf "${STAGE}/lib/"*".so"*
 
     touch __package_installed
 fi
@@ -1111,6 +1119,9 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
     cd "${PKG_SOURCE_SUBDIR}"
 
+    export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
+
     ./configure \
         --enable-year2038 \
         --enable-static \
@@ -1121,14 +1132,13 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
         --disable-rpath \
         --disable-scripts \
         --disable-doc \
-        --prefix="${PREFIX}" \
-        --host="${HOST}" \
+        --prefix="${STAGE}" \
     || handle_configure_error $?
 
     $MAKE
     make install
 
-    rm -rf "${PREFIX}/lib/"*".so"* "${PREFIX}/bin" "${PREFIX}/share"
+    rm -rf "${STAGE}/lib/"*".so"*
 
     touch __package_installed
 fi
@@ -1163,14 +1173,17 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
     cd "${PKG_SOURCE_SUBDIR}"
 
+    export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
+
     $MAKE zstd \
         LDFLAGS="-static ${LDFLAGS}" \
-        CFLAGS="${CFLAGS}" \
-        LIBS="-L${PREFIX}/lib -lz -llzma -llz4"
+        CPPFLAGS="${CPPFLAGS}"
+        LIBS="${STAGE}/lib/libz.a ${STAGE}/lib/liblzma.a ${STAGE}/lib/liblz4.a"
 
     make install
 
-    rm -rf "${PREFIX}/lib/"*".so"* "${PREFIX}/bin" "${PREFIX}/share"
+    rm -rf "${STAGE}/lib/"*".so"*
 
     touch __package_installed
 fi
