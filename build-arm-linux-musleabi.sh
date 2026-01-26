@@ -1069,7 +1069,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
 
     rm -rf "${PREFIX}/lib/"*".so"*
 
-    touch "../${PKG_BUILD_SUBDIR}/__package_installed"
+    touch "__package_installed"
 fi
 )
 
@@ -1175,7 +1175,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     #cp -p "${PREFIX}/bin/xz" "${PREFIX_TOOLCHAIN}/bin/"
     #cp -p "${PREFIX}/bin/lzma" "${PREFIX_TOOLCHAIN}/bin/"
 
-    touch "../${PKG_BUILD_SUBDIR}/__package_installed"
+    touch "__package_installed"
 fi
 )
 
@@ -1262,8 +1262,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
         --target=${TARGET} \
         --with-system-zlib \
         --with-zstd \
-        --enable-ld \
-        --enable-objcopy \
+        --enable-compressed-debug-sections=ld \
         --enable-default-compressed-debug-sections-algorithm=zlib \
         --disable-nls \
         --disable-werror \
@@ -1273,7 +1272,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     $MAKE
     make install
 
-    touch "../${PKG_BUILD_SUBDIR}/__package_installed"
+    touch "__package_installed"
 fi
 )
 
@@ -1285,25 +1284,22 @@ PKG_VERSION=2.6.36.4
 PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
 PKG_SOURCE_URL="https://www.kernel.org/pub/linux/kernel/v$(echo "$PKG_VERSION" | cut -d. -f1,2)/${PKG_SOURCE}"
 PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
-PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
 PKG_HASH="70d124743041974e1220fb39465627ded1df0fdd46da6cd74f6e3da414194d03"
 
 mkdir -p "${SRC_ROOT}/${PKG_NAME}"
 cd "${SRC_ROOT}/${PKG_NAME}"
 
-if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
+if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     on_build_started
+    rm -rf "${PKG_SOURCE_SUBDIR}"
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
-
-    rm -rf "${PKG_BUILD_SUBDIR}"
-    mkdir "${PKG_BUILD_SUBDIR}"
-
     cd "${PKG_SOURCE_SUBDIR}"
+
     make ARCH=arm INSTALL_HDR_PATH="${SYSROOT}/usr" headers_install
 
-    touch "../${PKG_BUILD_SUBDIR}/__package_installed"
+    touch "__package_installed"
 fi
 )
 
@@ -1351,7 +1347,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed__gcc" ]; then
     $MAKE all-gcc
     make install-gcc
 
-    touch "../${PKG_BUILD_SUBDIR}/__package_installed__gcc"
+    touch "__package_installed__gcc"
 fi
 )
 
@@ -1373,7 +1369,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed__libgcc" ]; then
     $MAKE all-target-libgcc
     make install-target-libgcc
 
-    touch "../${PKG_BUILD_SUBDIR}/__package_installed__libgcc"
+    touch "__package_installed__libgcc"
 fi
 )
 
@@ -1413,7 +1409,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     $MAKE
     make install
 
-    touch "../${PKG_BUILD_SUBDIR}/__package_installed"
+    touch "__package_installed"
 fi
 )
 
@@ -1451,12 +1447,12 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     $MAKE
     make install
 
-    touch "../${PKG_BUILD_SUBDIR}/__package_installed"
+    touch "__package_installed"
 fi
 )
 
 ################################################################################
-# gdb-17.1 (cross-gdb for arm-linux-musleabi)
+# gdb-17.1
 (
 PKG_NAME=gdb
 PKG_VERSION=17.1
@@ -1496,6 +1492,57 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
         --with-expat \
         --with-system-zlib \
         --with-zstd \
+        --enable-compressed-debug-sections=ld \
+        --enable-default-compressed-debug-sections-algorithm=zlib \
+    || handle_configure_error $?
+
+    $MAKE
+    make install
+
+    touch "__package_installed"
+fi
+)
+
+################################################################################
+# gdbserver
+(
+PKG_NAME=gdb
+PKG_VERSION=17.1
+PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
+PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build-gdbserver"
+
+cd "${SRC_ROOT}/${PKG_NAME}"
+
+if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
+    on_build_started
+
+    rm -rf "${PKG_BUILD_SUBDIR}"
+    mkdir "${PKG_BUILD_SUBDIR}"
+    cd "${PKG_BUILD_SUBDIR}"
+
+    export CC=${CROSS_PREFIX}gcc
+    export AR=${CROSS_PREFIX}ar
+    export RANLIB=${CROSS_PREFIX}ranlib
+    export STRIP=${CROSS_PREFIX}strip
+
+    CFLAGS_COMMON="-O3 -march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux -fomit-frame-pointer -ffunction-sections -fdata-sections -pipe -Wall -fPIC"
+    export CFLAGS="${CFLAGS_COMMON}"
+    export CXXFLAGS="${CFLAGS_COMMON}"
+    export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
+
+    export PKG_CONFIG="pkg-config"
+    export PKG_CONFIG_LIBDIR="${PREFIX}/lib/pkgconfig"
+    unset PKG_CONFIG_PATH
+
+    ../${PKG_SOURCE_SUBDIR}/gdbserver/configure \
+        --prefix="${PREFIX}" \
+        --host="${HOST}" \
+        --enable-threading=yes \
+        --disable-rpath \
+        --disable-nls \
+        --disable-werror \
+        --disable-unit-tests \
     || handle_configure_error $?
 
     $MAKE
