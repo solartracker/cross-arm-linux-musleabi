@@ -1029,166 +1029,6 @@ echo ""
 echo ""
 set -x
 
-################################################################################
-# zlib-1.3.1
-(
-PKG_NAME=zlib
-PKG_VERSION=1.3.1
-PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
-PKG_SOURCE_URL="https://github.com/madler/zlib/releases/download/v${PKG_VERSION}/${PKG_SOURCE}"
-PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
-PKG_HASH="38ef96b8dfe510d42707d9c781877914792541133e1870841463bfa73f883e32"
-
-mkdir -p "${SRC_ROOT}/${PKG_NAME}"
-cd "${SRC_ROOT}/${PKG_NAME}"
-
-if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
-    rm -rf "${PKG_SOURCE_SUBDIR}"
-    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
-    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
-    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
-    cd "${PKG_SOURCE_SUBDIR}"
-
-    export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
-    export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
-
-    ./configure \
-        --prefix="${STAGE}" \
-        --static \
-    || handle_configure_error $?
-
-    $MAKE
-    make install
-
-    rm -rf "${STAGE}/lib/"*".so"*
-
-    touch __package_installed
-fi
-)
-
-################################################################################
-# lz4-1.10.0
-(
-PKG_NAME=lz4
-PKG_VERSION=1.10.0
-PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.gz"
-PKG_SOURCE_URL="https://github.com/lz4/lz4/releases/download/v${PKG_VERSION}/${PKG_SOURCE}"
-PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
-PKG_HASH="537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b"
-
-mkdir -p "${SRC_ROOT}/${PKG_NAME}"
-cd "${SRC_ROOT}/${PKG_NAME}"
-
-if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
-    rm -rf "${PKG_SOURCE_SUBDIR}"
-    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
-    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
-    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
-    cd "${PKG_SOURCE_SUBDIR}"
-
-    export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
-    export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
-
-    make clean || true
-    $MAKE lib
-    make install PREFIX=${STAGE}
-
-    rm -rf "${STAGE}/lib/"*".so"*
-
-    touch __package_installed
-fi
-)
-
-################################################################################
-# xz-5.8.2
-(
-PKG_NAME=xz
-PKG_VERSION=5.8.2
-PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
-PKG_SOURCE_URL="https://github.com/tukaani-project/xz/releases/download/v${PKG_VERSION}/${PKG_SOURCE}"
-PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
-PKG_HASH="890966ec3f5d5cc151077879e157c0593500a522f413ac50ba26d22a9a145214"
-
-mkdir -p "${SRC_ROOT}/${PKG_NAME}"
-cd "${SRC_ROOT}/${PKG_NAME}"
-
-if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
-    rm -rf "${PKG_SOURCE_SUBDIR}"
-    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
-    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
-    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
-    cd "${PKG_SOURCE_SUBDIR}"
-
-    export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
-    export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
-
-    ./configure \
-        --enable-year2038 \
-        --enable-static \
-        --disable-shared \
-        --disable-assembler \
-        --disable-dependency-tracking \
-        --disable-nls \
-        --disable-rpath \
-        --disable-scripts \
-        --disable-doc \
-        --prefix="${STAGE}" \
-    || handle_configure_error $?
-
-    $MAKE
-    make install
-
-    rm -rf "${STAGE}/lib/"*".so"*
-
-    touch __package_installed
-fi
-)
-
-################################################################################
-# zstd-1.5.7
-(
-PKG_NAME=zstd
-PKG_VERSION=1.5.7
-PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.gz"
-PKG_SOURCE_URL="https://github.com/facebook/zstd/releases/download/v${PKG_VERSION}/${PKG_SOURCE}"
-PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
-PKG_HASH="eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3"
-
-#PKG_NAME=zstd
-#PKG_VERSION="1.5.7+git"
-#PKG_SOURCE_URL="https://github.com/facebook/zstd.git"
-#PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
-#PKG_SOURCE_VERSION="f8745da6ff1ad1e7bab384bd1f9d742439278e99"
-#PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}-${PKG_SOURCE_VERSION}.tar.xz"
-#PKG_HASH_VERIFY="tar_extract"
-#PKG_HASH="ae83002690aba91a210f3efc2dbf00aee5266f9b68f47b1130c95dd6a1a48e4b"
-
-mkdir -p "${SRC_ROOT}/${PKG_NAME}"
-cd "${SRC_ROOT}/${PKG_NAME}"
-
-if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
-    rm -rf "${PKG_SOURCE_SUBDIR}"
-    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "." "${PKG_SOURCE_VERSION}" "${PKG_SOURCE_SUBDIR}"
-    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
-    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
-    cd "${PKG_SOURCE_SUBDIR}"
-
-    export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
-    export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
-
-    $MAKE zstd \
-        LDFLAGS="-static ${LDFLAGS}" \
-        CPPFLAGS="${CPPFLAGS}"
-        LIBS="${STAGE}/lib/libz.a ${STAGE}/lib/liblzma.a ${STAGE}/lib/liblz4.a"
-
-    make install
-
-    rm -rf "${STAGE}/lib/"*".so"*
-
-    touch __package_installed
-fi
-)
-exit 1
 
 ################################################################################
 # binutils-2.45
@@ -1407,6 +1247,166 @@ fi
 )
 
 ################################################################################
+# zlib-1.3.1
+(
+PKG_NAME=zlib
+PKG_VERSION=1.3.1
+PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
+PKG_SOURCE_URL="https://github.com/madler/zlib/releases/download/v${PKG_VERSION}/${PKG_SOURCE}"
+PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
+PKG_HASH="38ef96b8dfe510d42707d9c781877914792541133e1870841463bfa73f883e32"
+
+mkdir -p "${SRC_ROOT}/${PKG_NAME}"
+cd "${SRC_ROOT}/${PKG_NAME}"
+
+if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
+    rm -rf "${PKG_SOURCE_SUBDIR}"
+    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
+    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
+    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
+    cd "${PKG_SOURCE_SUBDIR}"
+
+    export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
+
+    ./configure \
+        --prefix="${STAGE}" \
+        --static \
+    || handle_configure_error $?
+
+    $MAKE
+    make install
+
+    rm -rf "${STAGE}/lib/"*".so"*
+
+    touch __package_installed
+fi
+)
+
+################################################################################
+# lz4-1.10.0
+(
+PKG_NAME=lz4
+PKG_VERSION=1.10.0
+PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.gz"
+PKG_SOURCE_URL="https://github.com/lz4/lz4/releases/download/v${PKG_VERSION}/${PKG_SOURCE}"
+PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
+PKG_HASH="537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b"
+
+mkdir -p "${SRC_ROOT}/${PKG_NAME}"
+cd "${SRC_ROOT}/${PKG_NAME}"
+
+if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
+    rm -rf "${PKG_SOURCE_SUBDIR}"
+    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
+    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
+    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
+    cd "${PKG_SOURCE_SUBDIR}"
+
+    export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
+
+    make clean || true
+    $MAKE lib
+    make install PREFIX=${STAGE}
+
+    rm -rf "${STAGE}/lib/"*".so"*
+
+    touch __package_installed
+fi
+)
+
+################################################################################
+# xz-5.8.2
+(
+PKG_NAME=xz
+PKG_VERSION=5.8.2
+PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
+PKG_SOURCE_URL="https://github.com/tukaani-project/xz/releases/download/v${PKG_VERSION}/${PKG_SOURCE}"
+PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
+PKG_HASH="890966ec3f5d5cc151077879e157c0593500a522f413ac50ba26d22a9a145214"
+
+mkdir -p "${SRC_ROOT}/${PKG_NAME}"
+cd "${SRC_ROOT}/${PKG_NAME}"
+
+if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
+    rm -rf "${PKG_SOURCE_SUBDIR}"
+    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
+    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
+    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
+    cd "${PKG_SOURCE_SUBDIR}"
+
+    export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
+
+    ./configure \
+        --enable-year2038 \
+        --enable-static \
+        --disable-shared \
+        --disable-assembler \
+        --disable-dependency-tracking \
+        --disable-nls \
+        --disable-rpath \
+        --disable-scripts \
+        --disable-doc \
+        --prefix="${STAGE}" \
+    || handle_configure_error $?
+
+    $MAKE
+    make install
+
+    rm -rf "${STAGE}/lib/"*".so"*
+
+    touch __package_installed
+fi
+)
+
+################################################################################
+# zstd-1.5.7
+(
+PKG_NAME=zstd
+PKG_VERSION=1.5.7
+PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.gz"
+PKG_SOURCE_URL="https://github.com/facebook/zstd/releases/download/v${PKG_VERSION}/${PKG_SOURCE}"
+PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
+PKG_HASH="eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3"
+
+#PKG_NAME=zstd
+#PKG_VERSION="1.5.7+git"
+#PKG_SOURCE_URL="https://github.com/facebook/zstd.git"
+#PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
+#PKG_SOURCE_VERSION="f8745da6ff1ad1e7bab384bd1f9d742439278e99"
+#PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}-${PKG_SOURCE_VERSION}.tar.xz"
+#PKG_HASH_VERIFY="tar_extract"
+#PKG_HASH="ae83002690aba91a210f3efc2dbf00aee5266f9b68f47b1130c95dd6a1a48e4b"
+
+mkdir -p "${SRC_ROOT}/${PKG_NAME}"
+cd "${SRC_ROOT}/${PKG_NAME}"
+
+if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
+    rm -rf "${PKG_SOURCE_SUBDIR}"
+    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "." "${PKG_SOURCE_VERSION}" "${PKG_SOURCE_SUBDIR}"
+    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
+    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
+    cd "${PKG_SOURCE_SUBDIR}"
+
+    export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
+
+    $MAKE zstd \
+        LDFLAGS="-static ${LDFLAGS}" \
+        CPPFLAGS="${CPPFLAGS}"
+        LIBS="${STAGE}/lib/libz.a ${STAGE}/lib/liblzma.a ${STAGE}/lib/liblz4.a"
+
+    make install
+
+    rm -rf "${STAGE}/lib/"*".so"*
+
+    touch __package_installed
+fi
+)
+
+################################################################################
 # gdb-17.1 (cross-gdb for arm-linux-musleabi)
 (
 PKG_NAME=gdb
@@ -1430,6 +1430,9 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     mkdir "${PKG_BUILD_SUBDIR}"
     cd "${PKG_BUILD_SUBDIR}"
 
+    export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
+
     ../${PKG_SOURCE_SUBDIR}/configure \
         --target=${TARGET} \
         --prefix="${PREFIX}" \
@@ -1449,7 +1452,6 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     touch "__package_installed"
 fi
 )
-exit 1
 
 ################################################################################
 # Done compiling the toolchain
