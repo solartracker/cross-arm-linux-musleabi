@@ -1232,6 +1232,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
         --with-system-zlib \
         --with-zstd \
         --enable-compressed-debug-sections \
+        --enable-default-compressed-debug-sections-algorithm=zstd \
         --disable-nls \
         --disable-werror \
     || handle_configure_error $?
