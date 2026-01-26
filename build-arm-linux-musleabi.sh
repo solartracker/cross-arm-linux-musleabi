@@ -1059,7 +1059,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
     export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
 
-    ./configure \
+    ../${PKG_SOURCE_SUBDIR}/configure \
         --prefix="${PREFIX}" \
         --static \
     || handle_configure_error $?
@@ -1081,21 +1081,18 @@ PKG_VERSION=1.10.0
 PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.gz"
 PKG_SOURCE_URL="https://github.com/lz4/lz4/releases/download/v${PKG_VERSION}/${PKG_SOURCE}"
 PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
-PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
 PKG_HASH="537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b"
 
 mkdir -p "${SRC_ROOT}/${PKG_NAME}"
 cd "${SRC_ROOT}/${PKG_NAME}"
 
-if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
+if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     on_build_started
+    rm -rf "${PKG_SOURCE_SUBDIR}"
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
-
-    rm -rf "${PKG_BUILD_SUBDIR}"
-    mkdir "${PKG_BUILD_SUBDIR}"
-    cd "${PKG_BUILD_SUBDIR}"
+    cd "${PKG_SOURCE_SUBDIR}"
 
     export PREFIX="${STAGE}"
     export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
@@ -1107,7 +1104,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
 
     rm -rf "${PREFIX}/lib/"*".so"*
 
-    touch "../${PKG_BUILD_SUBDIR}/__package_installed"
+    touch __package_installed
 fi
 )
 
@@ -1139,7 +1136,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
     export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
 
-    ./configure \
+    ../${PKG_SOURCE_SUBDIR}/configure \
         --enable-year2038 \
         --enable-static \
         --disable-shared \
@@ -1169,21 +1166,18 @@ PKG_VERSION=1.5.7
 PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.gz"
 PKG_SOURCE_URL="https://github.com/facebook/zstd/releases/download/v${PKG_VERSION}/${PKG_SOURCE}"
 PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
-PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
 PKG_HASH="eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3"
 
 mkdir -p "${SRC_ROOT}/${PKG_NAME}"
 cd "${SRC_ROOT}/${PKG_NAME}"
 
-if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
+if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     on_build_started
-    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
+    rm -rf "${PKG_SOURCE_SUBDIR}"
+    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "." "${PKG_SOURCE_VERSION}" "${PKG_SOURCE_SUBDIR}"
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
-
-    rm -rf "${PKG_BUILD_SUBDIR}"
-    mkdir "${PKG_BUILD_SUBDIR}"
-    cd "${PKG_BUILD_SUBDIR}"
+    cd "${PKG_SOURCE_SUBDIR}"
 
     export PREFIX="${STAGE}"
     export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
@@ -1198,7 +1192,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
 
     rm -rf "${PREFIX}/lib/"*".so"*
 
-    touch "../${PKG_BUILD_SUBDIR}/__package_installed"
+    touch __package_installed
 fi
 )
 
