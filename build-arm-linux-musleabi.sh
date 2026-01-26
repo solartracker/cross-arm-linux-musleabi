@@ -1264,6 +1264,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
         --with-zstd \
         --enable-ld \
         --enable-objcopy \
+        --enable-default-compressed-debug-sections-algorithm=zlib \
         --disable-nls \
         --disable-werror \
         ac_cv_prog_with_compressed_debug_sections=yes \
