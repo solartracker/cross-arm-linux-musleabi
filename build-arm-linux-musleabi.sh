@@ -1264,6 +1264,8 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
         --with-zstd \
         --enable-compressed-debug-sections \
         --enable-default-compressed-debug-sections-algorithm=zstd \
+        --enable-ld \
+        --enable-objcopy \
         --disable-nls \
         --disable-werror \
     || handle_configure_error $?
