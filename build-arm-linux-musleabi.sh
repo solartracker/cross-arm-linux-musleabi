@@ -1055,6 +1055,8 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     $MAKE
     make install
 
+    rm -rf "${PREFIX}/lib/"*".so"* "${PREFIX}/bin" "${PREFIX}/share"
+
     touch __package_installed
 fi
 )
@@ -1082,6 +1084,8 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     make clean || true
     $MAKE lib
     make install PREFIX=${PREFIX}
+
+    rm -rf "${PREFIX}/lib/"*".so"* "${PREFIX}/bin" "${PREFIX}/share"
 
     touch __package_installed
 fi
@@ -1124,6 +1128,8 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     $MAKE
     make install
 
+    rm -rf "${PREFIX}/lib/"*".so"* "${PREFIX}/bin" "${PREFIX}/share"
+
     touch __package_installed
 fi
 )
@@ -1157,15 +1163,14 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
     cd "${PKG_SOURCE_SUBDIR}"
 
-    $MAKE lib \
+    $MAKE zstd \
         LDFLAGS="-static ${LDFLAGS}" \
         CFLAGS="${CFLAGS}" \
         LIBS="${PREFIX}/lib/libz.a ${PREFIX}/lib/liblzma.a ${PREFIX}/lib/liblz4.a"
 
     make install
 
-    # strip and verify there are no dependencies for static build
-    #finalize_build "${PREFIX}/bin/zstd"
+    rm -rf "${PREFIX}/lib/"*".so"* "${PREFIX}/bin" "${PREFIX}/share"
 
     touch __package_installed
 fi
