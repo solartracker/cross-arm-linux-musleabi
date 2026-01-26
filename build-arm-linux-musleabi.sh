@@ -1231,7 +1231,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
         --target=${TARGET} \
         --with-system-zlib \
         --with-zstd \
-        --enable-compressed-debug-sections \        
+        --enable-compressed-debug-sections \
         --disable-nls \
         --disable-werror \
     || handle_configure_error $?
