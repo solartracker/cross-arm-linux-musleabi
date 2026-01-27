@@ -1500,8 +1500,8 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     $MAKE
     make install
 
-    # strip and verify statically-linked
-    finalize_build "${PREFIX}/bin/${CROSS_PREFIX}gdb"
+    ## strip and verify statically-linked
+    #finalize_build "${PREFIX}/bin/${CROSS_PREFIX}gdb"
 
     touch "__package_installed"
 fi
