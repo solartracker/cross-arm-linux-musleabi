@@ -50,6 +50,9 @@ export PATH="${PATH}:${PREFIX}/bin:${SYSROOT}/bin"
 
 CROSS_PREFIX=${TARGET}-
 
+STRIP=strip
+READELF=readelf
+
 case "${HOST_CPU}" in
     armv7l)
         LDD="${SYSROOT}/lib/libc.so --list"
@@ -734,7 +737,7 @@ check_static() {
     for bin in "$@"; do
         echo "Checking ${bin}"
         file "${bin}" || true
-        if ${CROSS_PREFIX}readelf -d "${bin}" 2>/dev/null | grep NEEDED; then
+        if ${READELF} -d "${bin}" 2>/dev/null | grep NEEDED; then
             rc=1
         fi || true
         "${LDD}" "${bin}" 2>&1 || true
@@ -753,7 +756,7 @@ finalize_build() {
     set +x
     echo ""
     echo "Stripping symbols and sections from files..."
-    ${CROSS_PREFIX}strip -v "$@"
+    ${STRIP} -v "$@"
 
     # Exit here, if the programs are not statically linked.
     # If any binaries are not static, check_static() returns 1
@@ -1107,7 +1110,6 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     rm -rf "${PREFIX}/lib/"*".so"*
 
     ## strip and verify statically-linked 
-    #CROSS_PREFIX=""
     #finalize_build "${PREFIX}/bin/lz4"
 
     ## install the program
@@ -1167,7 +1169,6 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     rm -rf "${PREFIX}/lib/"*".so"*
 
     ## strip and verify statically-linked
-    #CROSS_PREFIX=""
     #finalize_build "${PREFIX}/bin/xz"
 
     ## install the program
@@ -1216,7 +1217,6 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     rm -rf "${PREFIX}/lib/"*".so"*
 
     # strip and verify statically-linked
-    CROSS_PREFIX=""
     finalize_build "${PREFIX}/bin/zstd"
 
     # install the program
@@ -1485,6 +1485,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
         --target=${TARGET} \
         --prefix="${PREFIX}" \
         --with-sysroot="${SYSROOT}" \
+        --with-static-standard-libraries \
         --enable-year2038 \
         --disable-nls \
         --disable-werror \
@@ -1498,6 +1499,9 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
 
     $MAKE
     make install
+
+    # strip and verify statically-linked
+    finalize_build "${PREFIX}/bin/${CROSS_PREFIX}gdb"
 
     touch "__package_installed"
 fi
@@ -1538,6 +1542,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     ../${PKG_SOURCE_SUBDIR}/configure \
         --prefix="${PREFIX}" \
         --host="${HOST}" \
+        --with-static-standard-libraries \
         --enable-year2038 \
         --enable-gdbserver \
         --disable-gdb \
@@ -1552,6 +1557,9 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
 
     $MAKE
     make install
+
+    # strip and verify statically-linked
+    finalize_build "${PREFIX}/bin/gdbserver"
 
     touch "__package_installed"
 fi
