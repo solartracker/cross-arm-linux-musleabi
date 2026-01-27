@@ -1533,7 +1533,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     CFLAGS_COMMON="-O3 -march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux -fomit-frame-pointer -ffunction-sections -fdata-sections -pipe -Wall -fPIC"
     export CFLAGS="${CFLAGS_COMMON}"
     export CXXFLAGS="${CFLAGS_COMMON}"
-    export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
+    export LDFLAGS="-static -L${PREFIX}/lib -Wl,--gc-sections"
     export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
 
     export PKG_CONFIG="pkg-config"
@@ -1544,6 +1544,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
         --prefix="${PREFIX}" \
         --host="${HOST}" \
         --with-static-standard-libraries \
+        --enable-threading=yes \
         --enable-year2038 \
         --enable-gdbserver \
         --disable-gdb \
