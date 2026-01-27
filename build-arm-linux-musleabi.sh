@@ -1452,7 +1452,7 @@ fi
 )
 
 ################################################################################
-# gdb-17.1
+# gdb-17.1 (host)
 (
 PKG_NAME=gdb
 PKG_VERSION=17.1
@@ -1489,7 +1489,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
         --enable-year2038 \
         --disable-nls \
         --disable-werror \
-        --with-python=no \
+        --without-python \
         --with-expat \
         --with-system-zlib \
         --with-zstd \
@@ -1508,7 +1508,7 @@ fi
 )
 
 ################################################################################
-# gdbserver
+# gdbserver (target device)
 (
 PKG_NAME=gdb
 PKG_VERSION=17.1
@@ -1562,6 +1562,66 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
 
     # strip and verify statically-linked
     finalize_build "${PREFIX}/bin/gdbserver"
+
+    touch "__package_installed"
+fi
+)
+
+################################################################################
+# gdb (target device)
+(
+PKG_NAME=gdb
+PKG_VERSION=17.1
+PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
+PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build-gdb"
+
+cd "${SRC_ROOT}/${PKG_NAME}"
+
+if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
+    on_build_started
+
+    rm -rf "${PKG_BUILD_SUBDIR}"
+    mkdir "${PKG_BUILD_SUBDIR}"
+    cd "${PKG_BUILD_SUBDIR}"
+
+    export CC=${CROSS_PREFIX}gcc
+    export AR=${CROSS_PREFIX}ar
+    export RANLIB=${CROSS_PREFIX}ranlib
+    export STRIP=${CROSS_PREFIX}strip
+    export READELF=${CROSS_PREFIX}readelf
+
+    CFLAGS_COMMON="-O3 -march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux -fomit-frame-pointer -ffunction-sections -fdata-sections -pipe -Wall -fPIC"
+    export CFLAGS="${CFLAGS_COMMON}"
+    export CXXFLAGS="${CFLAGS_COMMON}"
+    export LDFLAGS="-static -L${PREFIX}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
+
+    export PKG_CONFIG="pkg-config"
+    export PKG_CONFIG_LIBDIR="${PREFIX}/lib/pkgconfig"
+    unset PKG_CONFIG_PATH
+
+    ../${PKG_SOURCE_SUBDIR}/configure \
+        --prefix="${PREFIX}" \
+        --host="${HOST}" \
+        --with-static-standard-libraries \
+        --enable-year2038 \
+        --disable-nls \
+        --disable-werror \
+        --disable-tui \
+        --without-python \
+        --without-guile \
+        --with-expat \
+        --with-zlib \
+        --with-zstd \
+        --enable-compressed-debug-sections=ld \
+        --enable-default-compressed-debug-sections-algorithm=zlib \
+    || handle_configure_error $?
+
+    $MAKE
+    make install
+
+    # strip and verify statically-linked
+    finalize_build "${PREFIX}/bin/gdb"
 
     touch "__package_installed"
 fi
