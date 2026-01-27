@@ -1528,6 +1528,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     export AR=${CROSS_PREFIX}ar
     export RANLIB=${CROSS_PREFIX}ranlib
     export STRIP=${CROSS_PREFIX}strip
+    export READELF=${CROSS_PREFIX}readelf
 
     CFLAGS_COMMON="-O3 -march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux -fomit-frame-pointer -ffunction-sections -fdata-sections -pipe -Wall -fPIC"
     export CFLAGS="${CFLAGS_COMMON}"
