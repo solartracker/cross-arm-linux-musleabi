@@ -1,0 +1,17 @@
+--- a/ser-unix.c	2025-12-19 21:53:21.000000000 -0500
++++ b/ser-unix.c	2026-01-28 15:03:55.599233615 -0500
+@@ -529,12 +529,12 @@
+   /* Clear the current output baud rate and fill a new value.  */
+   tio.c_cflag &= ~CBAUD;
+   tio.c_cflag |= BOTHER;
+-  tio.c_ospeed = rate;
++  cfsetospeed(&tio, rate);
+ 
+   /* Clear the current input baud rate and fill a new value.  */
+   tio.c_cflag &= ~(CBAUD << IBSHIFT);
+   tio.c_cflag |= BOTHER << IBSHIFT;
+-  tio.c_ispeed = rate;
++  cfsetispeed(&tio, rate);
+ 
+   if (ioctl (fd, req_set, &tio) < 0)
+     perror_with_name (_("Can not set custom baud rate"));
