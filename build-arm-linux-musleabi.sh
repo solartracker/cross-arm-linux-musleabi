@@ -1658,6 +1658,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
         --host="${HOST}" \
         --enable-static \
         --disable-shared \
+        --disable-assembly \
     || handle_configure_error $?
 
     $MAKE
