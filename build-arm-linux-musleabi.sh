@@ -71,6 +71,9 @@ MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
 STAGE="${PREFIX}/stage"
 mkdir -p "${STAGE}"
 
+STAGE_ARM="${PREFIX}/stage-arm"
+mkdir -p "${STAGE_ARM}"
+
 
 ################################################################################
 # Host dependencies
@@ -1614,18 +1617,18 @@ fi
 )
 
 ################################################################################
-# gmp (target device)
+# zlib-1.3.1
 (
-PKG_NAME=gmp
-PKG_VERSION=6.3.0
+PKG_NAME=zlib
+PKG_VERSION=1.3.1
 PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
-PKG_SOURCE_URL="https://ftp.gnu.org/gnu/gmp/${PKG_SOURCE}"
+PKG_SOURCE_URL="https://github.com/madler/zlib/releases/download/v${PKG_VERSION}/${PKG_SOURCE}"
 PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
 PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
-PKG_HASH="a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898"
+PKG_HASH="38ef96b8dfe510d42707d9c781877914792541133e1870841463bfa73f883e32"
 
-mkdir -p "${SRC_ROOT}/${PKG_NAME}"
-cd "${SRC_ROOT}/${PKG_NAME}"
+mkdir -p "${SRC_ROOT}/${PKG_NAME}+target-device"
+cd "${SRC_ROOT}/${PKG_NAME}+target-device"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     on_build_started
@@ -1636,6 +1639,252 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     rm -rf "${PKG_BUILD_SUBDIR}"
     mkdir "${PKG_BUILD_SUBDIR}"
     cd "${PKG_BUILD_SUBDIR}"
+
+    export PREFIX="${STAGE_ARM}"
+
+    export CC=${CROSS_PREFIX}gcc
+    export AR=${CROSS_PREFIX}ar
+    export RANLIB=${CROSS_PREFIX}ranlib
+    export STRIP=${CROSS_PREFIX}strip
+    export READELF=${CROSS_PREFIX}readelf
+
+    CFLAGS_COMMON="-O3 -march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux -fomit-frame-pointer -ffunction-sections -fdata-sections -pipe -Wall -fPIC"
+    export CFLAGS="${CFLAGS_COMMON}"
+    export CXXFLAGS="${CFLAGS_COMMON}"
+    export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
+
+    export PKG_CONFIG="pkg-config"
+    export PKG_CONFIG_LIBDIR="${PREFIX}/lib/pkgconfig"
+    unset PKG_CONFIG_PATH
+
+    ../${PKG_SOURCE_SUBDIR}/configure \
+        --prefix="${PREFIX}" \
+        --static \
+    || handle_configure_error $?
+
+    $MAKE
+    make install
+
+    rm -rf "${PREFIX}/lib/"*".so"*
+
+    touch "__package_installed"
+fi
+)
+
+################################################################################
+# lz4-1.10.0
+(
+PKG_NAME=lz4
+PKG_VERSION=1.10.0
+PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.gz"
+PKG_SOURCE_URL="https://github.com/lz4/lz4/releases/download/v${PKG_VERSION}/${PKG_SOURCE}"
+PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
+PKG_HASH="537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b"
+
+mkdir -p "${SRC_ROOT}/${PKG_NAME}+target-device"
+cd "${SRC_ROOT}/${PKG_NAME}+target-device"
+
+if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
+    on_build_started
+    rm -rf "${PKG_SOURCE_SUBDIR}"
+    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
+    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
+    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
+    cd "${PKG_SOURCE_SUBDIR}"
+
+    export PREFIX="${STAGE_ARM}"
+
+    export CC=${CROSS_PREFIX}gcc
+    export AR=${CROSS_PREFIX}ar
+    export RANLIB=${CROSS_PREFIX}ranlib
+    export STRIP=${CROSS_PREFIX}strip
+    export READELF=${CROSS_PREFIX}readelf
+
+    CFLAGS_COMMON="-O3 -march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux -fomit-frame-pointer -ffunction-sections -fdata-sections -pipe -Wall -fPIC"
+    export CFLAGS="${CFLAGS_COMMON}"
+    export CXXFLAGS="${CFLAGS_COMMON}"
+    export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
+
+    export PKG_CONFIG="pkg-config"
+    export PKG_CONFIG_LIBDIR="${PREFIX}/lib/pkgconfig"
+    unset PKG_CONFIG_PATH
+
+    make clean || true
+    $MAKE lib
+    make install PREFIX=${PREFIX}
+
+    rm -rf "${PREFIX}/lib/"*".so"*
+
+    ## strip and verify statically-linked
+    #finalize_build "${PREFIX}/bin/lz4"
+
+    ## install the program
+    #mkdir -p "${PREFIX_TOOLCHAIN}/bin/"
+    #cp -p "${PREFIX}/bin/lz4" "${PREFIX_TOOLCHAIN}/bin/"
+
+    touch __package_installed
+fi
+)
+
+################################################################################
+# xz-5.8.2
+(
+PKG_NAME=xz
+PKG_VERSION=5.8.2
+PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
+PKG_SOURCE_URL="https://github.com/tukaani-project/xz/releases/download/v${PKG_VERSION}/${PKG_SOURCE}"
+PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
+PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
+PKG_HASH="890966ec3f5d5cc151077879e157c0593500a522f413ac50ba26d22a9a145214"
+
+mkdir -p "${SRC_ROOT}/${PKG_NAME}+target-device"
+cd "${SRC_ROOT}/${PKG_NAME}+target-device"
+
+if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
+    on_build_started
+    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
+    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
+    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
+
+    rm -rf "${PKG_BUILD_SUBDIR}"
+    mkdir "${PKG_BUILD_SUBDIR}"
+    cd "${PKG_BUILD_SUBDIR}"
+
+    export PREFIX="${STAGE_ARM}"
+
+    export CC=${CROSS_PREFIX}gcc
+    export AR=${CROSS_PREFIX}ar
+    export RANLIB=${CROSS_PREFIX}ranlib
+    export STRIP=${CROSS_PREFIX}strip
+    export READELF=${CROSS_PREFIX}readelf
+
+    CFLAGS_COMMON="-O3 -march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux -fomit-frame-pointer -ffunction-sections -fdata-sections -pipe -Wall -fPIC"
+    export CFLAGS="${CFLAGS_COMMON}"
+    export CXXFLAGS="${CFLAGS_COMMON}"
+    export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
+
+    export PKG_CONFIG="pkg-config"
+    export PKG_CONFIG_LIBDIR="${PREFIX}/lib/pkgconfig"
+    unset PKG_CONFIG_PATH
+
+    ../${PKG_SOURCE_SUBDIR}/configure \
+        --enable-year2038 \
+        --enable-static \
+        --disable-shared \
+        --disable-assembler \
+        --disable-dependency-tracking \
+        --disable-nls \
+        --disable-rpath \
+        --disable-scripts \
+        --disable-doc \
+        --prefix="${PREFIX}" \
+    || handle_configure_error $?
+
+    $MAKE
+    make install
+
+    rm -rf "${PREFIX}/lib/"*".so"*
+
+    ## strip and verify statically-linked
+    #finalize_build "${PREFIX}/bin/xz"
+
+    ## install the program
+    #mkdir -p "${PREFIX_TOOLCHAIN}/bin/"
+    #cp -p "${PREFIX}/bin/xz" "${PREFIX_TOOLCHAIN}/bin/"
+    #cp -p "${PREFIX}/bin/lzma" "${PREFIX_TOOLCHAIN}/bin/"
+
+    touch "__package_installed"
+fi
+)
+
+################################################################################
+# zstd-1.5.7
+(
+PKG_NAME=zstd
+PKG_VERSION=1.5.7
+PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.gz"
+PKG_SOURCE_URL="https://github.com/facebook/zstd/releases/download/v${PKG_VERSION}/${PKG_SOURCE}"
+PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
+PKG_HASH="eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3"
+
+mkdir -p "${SRC_ROOT}/${PKG_NAME}+target-device"
+cd "${SRC_ROOT}/${PKG_NAME}+target-device"
+
+if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
+    on_build_started
+    rm -rf "${PKG_SOURCE_SUBDIR}"
+    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "." "${PKG_SOURCE_VERSION}" "${PKG_SOURCE_SUBDIR}"
+    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
+    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
+    cd "${PKG_SOURCE_SUBDIR}"
+
+    PREFIX_TOOLCHAIN="${PREFIX}"
+    export PREFIX="${STAGE_ARM}"
+
+    export CC=${CROSS_PREFIX}gcc
+    export AR=${CROSS_PREFIX}ar
+    export RANLIB=${CROSS_PREFIX}ranlib
+    export STRIP=${CROSS_PREFIX}strip
+    export READELF=${CROSS_PREFIX}readelf
+
+    CFLAGS_COMMON="-O3 -march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux -fomit-frame-pointer -ffunction-sections -fdata-sections -pipe -Wall -fPIC"
+    export CFLAGS="${CFLAGS_COMMON}"
+    export CXXFLAGS="${CFLAGS_COMMON}"
+    export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
+
+    export PKG_CONFIG="pkg-config"
+    export PKG_CONFIG_LIBDIR="${PREFIX}/lib/pkgconfig"
+    unset PKG_CONFIG_PATH
+
+    $MAKE zstd \
+        LDFLAGS="-static ${LDFLAGS}" \
+        CPPFLAGS="${CPPFLAGS}"
+        LIBS="${PREFIX}/lib/libz.a ${PREFIX}/lib/liblzma.a ${PREFIX}/lib/liblz4.a"
+
+    make install
+
+    rm -rf "${PREFIX}/lib/"*".so"*
+
+    # strip and verify statically-linked
+    finalize_build "${PREFIX}/bin/zstd"
+
+    # install the program
+    mkdir -p "${PREFIX_TOOLCHAIN}/bin/"
+    cp -p "${PREFIX}/bin/zstd" "${PREFIX_TOOLCHAIN}/bin/"
+
+    touch __package_installed
+fi
+)
+
+################################################################################
+# gmp (target device)
+(
+PKG_NAME=gmp
+PKG_VERSION=6.3.0
+PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
+PKG_SOURCE_URL="https://ftp.gnu.org/gnu/gmp/${PKG_SOURCE}"
+PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
+PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
+PKG_HASH="a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898"
+
+mkdir -p "${SRC_ROOT}/${PKG_NAME}+target-device"
+cd "${SRC_ROOT}/${PKG_NAME}+target-device"
+
+if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
+    on_build_started
+    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
+    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
+    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
+
+    rm -rf "${PKG_BUILD_SUBDIR}"
+    mkdir "${PKG_BUILD_SUBDIR}"
+    cd "${PKG_BUILD_SUBDIR}"
+
+    export PREFIX="${STAGE_ARM}"
 
     export CC=${CROSS_PREFIX}gcc
     export AR=${CROSS_PREFIX}ar
@@ -1679,8 +1928,8 @@ PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
 PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
 PKG_HASH="b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01"
 
-mkdir -p "${SRC_ROOT}/${PKG_NAME}"
-cd "${SRC_ROOT}/${PKG_NAME}"
+mkdir -p "${SRC_ROOT}/${PKG_NAME}+target-device"
+cd "${SRC_ROOT}/${PKG_NAME}+target-device"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     on_build_started
@@ -1691,6 +1940,8 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     rm -rf "${PKG_BUILD_SUBDIR}"
     mkdir "${PKG_BUILD_SUBDIR}"
     cd "${PKG_BUILD_SUBDIR}"
+
+    export PREFIX="${STAGE_ARM}"
 
     export CC=${CROSS_PREFIX}gcc
     export AR=${CROSS_PREFIX}ar
@@ -1727,17 +1978,27 @@ fi
 (
 PKG_NAME=gdb
 PKG_VERSION=17.1
+PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
+PKG_SOURCE_URL="https://ftp.gnu.org/gnu/gdb/${PKG_SOURCE}"
 PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
-PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build-gdb"
+PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
+PKG_HASH="14996f5f74c9f68f5a543fdc45bca7800207f91f92aeea6c2e791822c7c6d876"
 
-cd "${SRC_ROOT}/${PKG_NAME}"
+mkdir -p "${SRC_ROOT}/${PKG_NAME}+target-device"
+cd "${SRC_ROOT}/${PKG_NAME}+target-device"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     on_build_started
+    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
+    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
+    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
 
     rm -rf "${PKG_BUILD_SUBDIR}"
     mkdir "${PKG_BUILD_SUBDIR}"
     cd "${PKG_BUILD_SUBDIR}"
+
+    PREFIX_TOOLCHAIN="${PREFIX}"
+    export PREFIX="${STAGE_ARM}"
 
     export CC=${CROSS_PREFIX}gcc
     export AR=${CROSS_PREFIX}ar
@@ -1777,6 +2038,10 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
 
     # strip and verify statically-linked
     finalize_build "${PREFIX}/bin/gdb"
+
+    # install the program
+    mkdir -p "${PREFIX_TOOLCHAIN}/bin/"
+    cp -p "${PREFIX}/bin/gdb" "${PREFIX_TOOLCHAIN}/bin/"
 
     touch "__package_installed"
 fi
