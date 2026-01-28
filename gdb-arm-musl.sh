@@ -1026,6 +1026,8 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
 
     make install
 
+    rm -rf "${PREFIX}/lib/libzstd.so"*
+
     # strip and verify there are no dependencies for static build
     finalize_build "${PREFIX}/bin/zstd"
 
