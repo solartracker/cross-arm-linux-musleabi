@@ -24,10 +24,9 @@ PATH_CMD="$(readlink -f -- "$0")"
 SCRIPT_DIR="$(dirname -- "$(readlink -f -- "$0")")"
 PARENT_DIR="$(dirname -- "$(dirname -- "$(readlink -f -- "$0")")")"
 CACHED_DIR="${PARENT_DIR}/solartracker-sources"
-#FILE_DOWNLOADER='use_wget'
+FILE_DOWNLOADER='use_wget'
 #FILE_DOWNLOADER='use_curl'
-FILE_DOWNLOADER='use_curl_socks5_proxy'
-CURL_SOCKS5_PROXY="192.168.1.1:9150" # TOR SOCKS5 proxy on local network
+#FILE_DOWNLOADER='use_curl_socks5_proxy'; CURL_SOCKS5_PROXY="192.168.1.1:9150"
 set -e
 set -x
 
@@ -1609,6 +1608,106 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
 
     # strip and verify statically-linked
     finalize_build "${PREFIX}/bin/gdbserver"
+
+    touch "__package_installed"
+fi
+)
+
+################################################################################
+# gmp (target device)
+(
+PKG_NAME=gmp
+PKG_VERSION=6.3.0
+PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
+PKG_SOURCE_URL="https://ftp.gnu.org/gnu/gmp/${PKG_SOURCE}"
+PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
+PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
+PKG_HASH="a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898"
+
+cd "${SRC_ROOT}/${PKG_NAME}"
+
+if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
+    on_build_started
+
+    rm -rf "${PKG_BUILD_SUBDIR}"
+    mkdir "${PKG_BUILD_SUBDIR}"
+    cd "${PKG_BUILD_SUBDIR}"
+
+    export CC=${CROSS_PREFIX}gcc
+    export AR=${CROSS_PREFIX}ar
+    export RANLIB=${CROSS_PREFIX}ranlib
+    export STRIP=${CROSS_PREFIX}strip
+    export READELF=${CROSS_PREFIX}readelf
+
+    CFLAGS_COMMON="-O3 -march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux -fomit-frame-pointer -ffunction-sections -fdata-sections -pipe -Wall -fPIC"
+    export CFLAGS="${CFLAGS_COMMON}"
+    export CXXFLAGS="${CFLAGS_COMMON}"
+    export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
+
+    export PKG_CONFIG="pkg-config"
+    export PKG_CONFIG_LIBDIR="${PREFIX}/lib/pkgconfig"
+    unset PKG_CONFIG_PATH
+
+    ../${PKG_SOURCE_SUBDIR}/configure \
+        --prefix="${PREFIX}" \
+        --host="${HOST}" \
+        --enable-static \
+        --disable-shared \
+    || handle_configure_error $?
+
+    $MAKE
+    make install
+
+    touch "__package_installed"
+fi
+)
+
+################################################################################
+# mpfr (target device)
+(
+PKG_NAME=mpfr
+PKG_VERSION=4.2.2
+PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
+PKG_SOURCE_URL="https://ftp.gnu.org/gnu/mpfr/${PKG_SOURCE}"
+PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
+PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
+PKG_HASH="b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01"
+
+cd "${SRC_ROOT}/${PKG_NAME}"
+
+if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
+    on_build_started
+
+    rm -rf "${PKG_BUILD_SUBDIR}"
+    mkdir "${PKG_BUILD_SUBDIR}"
+    cd "${PKG_BUILD_SUBDIR}"
+
+    export CC=${CROSS_PREFIX}gcc
+    export AR=${CROSS_PREFIX}ar
+    export RANLIB=${CROSS_PREFIX}ranlib
+    export STRIP=${CROSS_PREFIX}strip
+    export READELF=${CROSS_PREFIX}readelf
+
+    CFLAGS_COMMON="-O3 -march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux -fomit-frame-pointer -ffunction-sections -fdata-sections -pipe -Wall -fPIC"
+    export CFLAGS="${CFLAGS_COMMON}"
+    export CXXFLAGS="${CFLAGS_COMMON}"
+    export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
+    export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
+
+    export PKG_CONFIG="pkg-config"
+    export PKG_CONFIG_LIBDIR="${PREFIX}/lib/pkgconfig"
+    unset PKG_CONFIG_PATH
+
+    ../${PKG_SOURCE_SUBDIR}/configure \
+        --prefix="${PREFIX}" \
+        --host="${HOST}" \
+        --enable-static \
+        --disable-shared \
+    || handle_configure_error $?
+
+    $MAKE
+    make install
 
     touch "__package_installed"
 fi
