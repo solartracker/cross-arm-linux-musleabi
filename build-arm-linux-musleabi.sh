@@ -1629,6 +1629,9 @@ cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     on_build_started
+    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
+    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
+    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
 
     rm -rf "${PKG_BUILD_SUBDIR}"
     mkdir "${PKG_BUILD_SUBDIR}"
@@ -1680,6 +1683,9 @@ cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     on_build_started
+    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
+    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
+    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
 
     rm -rf "${PKG_BUILD_SUBDIR}"
     mkdir "${PKG_BUILD_SUBDIR}"
