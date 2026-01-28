@@ -1173,6 +1173,8 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     ../${PKG_SOURCE_SUBDIR}/configure \
         --prefix="${PREFIX}" \
         --host="${HOST}" \
+        --enable-static \
+        --disable-shared \
         --with-static-standard-libraries \
         --enable-year2038 \
         --disable-nls \
@@ -1191,7 +1193,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     make install
 
     # strip and verify statically-linked
-    finalize_build "${PREFIX}/bin/gdb"
+    finalize_build "${PREFIX}/bin/gdb" \
                    "${PREFIX}/bin/gdbserver"
 
     touch "__package_installed"
