@@ -1644,7 +1644,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     export READELF=${CROSS_PREFIX}readelf
 
     CFLAGS_COMMON="-O3 -march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux -fomit-frame-pointer -ffunction-sections -fdata-sections -pipe -Wall -fPIC"
-    export CFLAGS="${CFLAGS_COMMON} -std=gnu89"
+    export CFLAGS="${CFLAGS_COMMON} -std=gnu99"
     export CXXFLAGS="${CFLAGS_COMMON}"
     export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
     export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
