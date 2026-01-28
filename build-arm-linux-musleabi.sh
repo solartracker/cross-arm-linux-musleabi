@@ -24,6 +24,10 @@ PATH_CMD="$(readlink -f -- "$0")"
 SCRIPT_DIR="$(dirname -- "$(readlink -f -- "$0")")"
 PARENT_DIR="$(dirname -- "$(dirname -- "$(readlink -f -- "$0")")")"
 CACHED_DIR="${PARENT_DIR}/solartracker-sources"
+#FILE_DOWNLOADER='use_wget'
+#FILE_DOWNLOADER='use_curl'
+FILE_DOWNLOADER='use_curl_socks5_proxy'
+CURL_SOCKS5_PROXY="192.168.1.1:9150" # TOR SOCKS5 proxy on local network
 set -e
 set -x
 
@@ -327,7 +331,50 @@ retry() {
     done
 }
 
-wget_clean() {
+invoke_download_command() {
+    [ -n "$1" ]                   || return 1
+    [ -n "$2" ]                   || return 1
+
+    local temp_path="$1"
+    local source_url="$2"
+    case "${FILE_DOWNLOADER}" in
+        use_wget)
+            if ! wget -O "${temp_path}" \
+                      --tries=1 --retry-connrefused --waitretry=5 \
+                      "${source_url}"; then
+                return 1
+            fi
+            ;;
+        use_curl)
+            if ! curl --fail --retry 1 --retry-connrefused --retry-delay 5 \
+                      --output "$temp_path" \
+                      --remote-time \
+                      "$source_url"; then
+                return 1
+            fi
+            ;;
+        use_curl_socks5_proxy)
+            if [ -z "${CURL_SOCKS5_PROXY}" ]; then
+                echo "You must specify a SOCKS5 proxy for download command: ${FILE_DOWNLOADER}" >&2
+                return 1
+            fi
+            if ! curl --socks5-hostname ${CURL_SOCKS5_PROXY} \
+                      --fail --retry 1 --retry-connrefused --retry-delay 5 \
+                      --output "$temp_path" \
+                      --remote-time \
+                      "$source_url"; then
+                return 1
+            fi
+            ;;
+        *)
+            echo "Unsupported file download command: '${FILE_DOWNLOADER}'" >&2
+            return 1
+            ;;
+    esac
+    return 0
+}
+
+download_clean() {
     [ -n "$1" ]          || return 1
     [ -n "$2" ]          || return 1
     [ -n "$3" ]          || return 1
@@ -337,7 +384,7 @@ wget_clean() {
     local target_path="$3"
 
     rm -f "${temp_path}"
-    if ! wget -O "${temp_path}" --tries=1 --retry-connrefused --waitretry=5 "${source_url}"; then
+    if ! invoke_download_command "${temp_path}" "${source_url}"; then
         rm -f "${temp_path}"
         if [ -f "${target_path}" ]; then
             return 0
@@ -381,7 +428,7 @@ download()
             trap 'cleanup; exit 143' TERM
             trap 'cleanup' EXIT
             temp_path=$(mktemp "${cached_path}.XXXXXX")
-            if ! retry 1000 wget_clean "${temp_path}" "${source_url}" "${cached_path}"; then
+            if ! retry 1000 download_clean "${temp_path}" "${source_url}" "${cached_path}"; then
                 return 1
             fi
             trap - EXIT INT TERM
