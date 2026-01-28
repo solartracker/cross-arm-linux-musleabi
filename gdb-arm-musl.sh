@@ -1,8 +1,9 @@
-#!/bin/bash
+#!/bin/sh
 ################################################################################
-# build-arm-linux-musleabi.sh
+# gdb-arm-musl.sh
 #
-# Builds a cross-compiler for ARMv7 soft-float musl libc
+# Build script for a statically linked version of GDB that runs on any ARMv7
+# Linux device.
 #
 # Copyright (C) 2025 Richard Elwell
 #
@@ -30,31 +31,34 @@ FILE_DOWNLOADER='use_wget'
 set -e
 set -x
 
-################################################################################
-# General
+main() {
+PKG_ROOT=gdb
+PKG_ROOT_VERSION="17.1"
+PKG_ROOT_RELEASE=1
+PKG_TARGET_CPU=armv7
 
-RELEASE_VERSION=0.2.0
-
-CROSSBUILD_DIR="${SCRIPT_DIR}-build"
-mkdir -p "${CROSSBUILD_DIR}"
-
-BUILD_START_PATH="${CROSSBUILD_DIR}/.build_start"
-VERSION_PATH="${CROSSBUILD_DIR}/VERSION"
-
-SRC_ROOT="${CROSSBUILD_DIR}/src"
-mkdir -p "$SRC_ROOT"
-
+CROSSBUILD_SUBDIR="cross-arm-linux-musleabi-build"
+CROSSBUILD_DIR="${PARENT_DIR}/${CROSSBUILD_SUBDIR}"
 export TARGET=arm-linux-musleabi
 
+HOST_CPU="$(uname -m)"
 export PREFIX="${CROSSBUILD_DIR}"
 export HOST=${TARGET}
 export SYSROOT="${PREFIX}/${TARGET}"
 export PATH="${PATH}:${PREFIX}/bin:${SYSROOT}/bin"
 
 CROSS_PREFIX=${TARGET}-
+export CC=${CROSS_PREFIX}gcc
+export AR=${CROSS_PREFIX}ar
+export RANLIB=${CROSS_PREFIX}ranlib
+export STRIP=${CROSS_PREFIX}strip
+export READELF=${CROSS_PREFIX}readelf
 
-STRIP=strip
-READELF=readelf
+CFLAGS_COMMON="-O3 -march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux -fomit-frame-pointer -ffunction-sections -fdata-sections -pipe -Wall -fPIC"
+export CFLAGS="${CFLAGS_COMMON} -std=gnu99"
+export CXXFLAGS="${CFLAGS_COMMON} -std=gnu++17"
+export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
+export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
 
 case "${HOST_CPU}" in
     armv7l)
@@ -65,104 +69,21 @@ case "${HOST_CPU}" in
         ;;
 esac
 
+SRC_ROOT="${CROSSBUILD_DIR}/src/${PKG_ROOT}"
+mkdir -p "${SRC_ROOT}"
+
 MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
 #MAKE="make -j1"                                  # one job at a time
 
-STAGE="${PREFIX}/stage"
-mkdir -p "${STAGE}"
+export PKG_CONFIG="pkg-config"
+export PKG_CONFIG_LIBDIR="${PREFIX}/lib/pkgconfig"
+unset PKG_CONFIG_PATH
 
+install_build_environment
+download_and_compile
+create_install_package
 
-################################################################################
-# Host dependencies
-#
-
-prompt_install_choice() {
-    echo
-    echo "Host dependencies are missing or outdated."
-    echo "Choose an action:"
-    echo "  [y] Install now"
-    echo "  [n] Do not install (abort build)"
-    echo
-
-    read -r -p "Selection [y/n]: " choice
-
-    case "$choice" in
-        y|Y)
-            return 0
-            ;;
-        n|N)
-            return 1
-            ;;
-        *)
-            echo "Invalid selection."
-            return 1
-            ;;
-    esac
-    return 0
-}
-
-install_dependencies() {
-
-    # list each package and optional minimum version
-    # example: "build-essential 12.9"
-    local dependencies=(
-        "build-essential"
-        "binutils"
-        "bison"
-        "flex"
-        "texinfo"
-        "gawk"
-        "perl"
-        "patch"
-        "file"
-        "wget"
-        "curl"
-        "git"
-        "libgmp-dev"
-        "libmpfr-dev"
-        "libmpc-dev"
-        "libisl-dev"
-        "zlib1g-dev"
-        "cmake"
-    )
-    local to_install=()
-
-    echo "[*] Checking dependencies..."
-    for entry in "${dependencies[@]}"; do
-        local pkg min_version installed_version
-        read -r pkg min_version <<< "$entry"
-
-        if installed_version="$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null)"; then
-            if [ -n "$min_version" ]; then
-                if dpkg --compare-versions "$installed_version" ge "$min_version"; then
-                    echo "[*] $pkg $installed_version is OK."
-                else
-                    echo "[*] $pkg $installed_version is too old (min $min_version)."
-                    to_install+=("$pkg")
-                fi
-            else
-                echo "[*] $pkg is installed."
-            fi
-        else
-            echo "[*] $pkg not installed."
-            to_install+=("$pkg")
-        fi
-    done
-
-    if [ "${#to_install[@]}" -eq 0 ]; then
-        echo "[*] All dependencies satisfied."
-        return 0
-    fi
-
-    if ! prompt_install_choice; then
-        return 1
-    fi
-
-    echo "[*] Installing dependencies: ${to_install[*]}"
-    sudo apt-get update
-    sudo apt-get install -y "${to_install[@]}"
-
-    return 0
+return 0
 }
 
 ################################################################################
@@ -841,7 +762,7 @@ restore_shared_libraries() {
     return 0
 }
 
-create_install_package()
+add_items_to_install_package()
 ( # BEGIN sub-shell
     [ "$#" -gt 0 ] || return 1
     [ -n "$PKG_ROOT" ]            || return 1
@@ -903,183 +824,80 @@ create_install_package()
 
 
 ################################################################################
-# Archive build directory
+# Install the build environment
+# ARM Linux musl Cross-Compiler v0.2.0
 #
+install_build_environment() {
+(
+PKG_NAME=cross-arm-linux-musleabi
+get_latest() { get_latest_package "${PKG_NAME}-${HOST_CPU}-" "??????????????" ".tar.xz"; }
+#PKG_VERSION="$(get_latest)" # this line will fail if you did not build a toolchain yourself
+PKG_VERSION=0.2.0 # this line will cause a toolchain to be downloaded from Github
+PKG_SOURCE="${PKG_NAME}-${HOST_CPU}-${PKG_VERSION}.tar.xz"
+PKG_SOURCE_URL="https://github.com/solartracker/${PKG_NAME}/releases/download/${PKG_VERSION}/${PKG_SOURCE}"
+PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
+PKG_SOURCE_PATH="${CACHED_DIR}/${PKG_SOURCE}"
 
-is_arm() {
-    case "$(uname -m)" in
-        arm*|aarch64) return 0 ;;
-        *) return 1 ;;
+if signature_file_exists "${PKG_SOURCE_PATH}"; then
+    # use an archived toolchain that you built yourself, along with a signature
+    # file that was created automatically.  the version number is a 14 digit
+    # timestamp and a symbolic link was automatically created for the release
+    # asset that would normally have been downloaded. all this is done for you
+    # by the toolchain build script: build-arm-linux-musleabi.sh
+    #
+    # Example of what your sources directory might look like:
+    # cross-arm-linux-musleabi-armv7l-20260120150840.tar.xz
+    # cross-arm-linux-musleabi-armv7l-20260120150840.tar.xz.sha256
+    # cross-arm-linux-musleabi-armv7l-0.2.0.tar.xz -> cross-arm-linux-musleabi-armv7l-20260120150840.tar.xz
+    # cross-arm-linux-musleabi-armv7l-0.2.0.tar.xz.sha256 -> cross-arm-linux-musleabi-armv7l-20260120150840.tar.xz.sha256
+    #
+    PKG_HASH=""
+else
+    # alternatively, the toolchain can be downloaded from Github. note that the version
+    # number is the Github tag, instead of a 14 digit timestamp.
+    case "${HOST_CPU}" in
+        armv7l)
+            # cross-arm-linux-musleabi-armv7l-0.2.0.tar.xz
+            PKG_HASH="db200a801420d21b5328c9005225bb0fa822b612c6b67b3da58c397458238634"
+            ;;
+        x86_64)
+            # cross-arm-linux-musleabi-x86_64-0.2.0.tar.xz
+            PKG_HASH="9a303a9978ff8d590394bccf2a03890ccb129916347dcdd66dc7780ea7826d9b"
+            ;;
+        *)
+            echo "Unsupported CPU architecture: "${HOST_CPU} >&2
+            exit 1
+            ;;
     esac
+fi
+
+# Check if toolchain exists and install it, if needed
+if [ ! -d "${CROSSBUILD_DIR}" ]; then
+    echo "Toolchain not found at ${CROSSBUILD_DIR}. Installing..."
+    echo ""
+    cd ${PARENT_DIR}
+    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "${CACHED_DIR}"
+    verify_hash "${PKG_SOURCE_PATH}" "${PKG_HASH}"
+    unpack_archive "${PKG_SOURCE_PATH}" "${CROSSBUILD_DIR}"
+fi
+
+# Check for required toolchain tools
+if [ ! -x "${CROSSBUILD_DIR}/bin/${TARGET}-gcc" ]; then
+    echo "ERROR: Toolchain installation appears incomplete."
+    echo "Missing ${TARGET}-gcc in ${CROSSBUILD_DIR}/bin"
+    echo ""
+    exit 1
+fi
+if [ ! -x "${CROSSBUILD_DIR}/${TARGET}/lib/libc.so" ]; then
+    echo "ERROR: Toolchain installation appears incomplete."
+    echo "Missing libc.so in ${CROSSBUILD_DIR}/${TARGET}/lib"
+    echo ""
+    exit 1
+fi
+)
 }
 
-on_build_started() {
-    if [ ! -f "${BUILD_START_PATH}" ]; then
-        SAVED_PWD="${PWD}"
-        write_version_info
-        touch "${BUILD_START_PATH}"
-        cd "$SAVED_PWD"
-    fi
-    return 0
-}
-
-on_build_finished() {
-    local mtime=""
-
-    if [ -z "${BUILD_START_TIME}" ]; then
-        if [ ! -f "${BUILD_START_PATH}" ]; then
-            BUILD_START_TIME="(unknown)"
-            BUILD_STOP_TIME="(unknown)"
-            write_version_info
-        else
-            mtime=$(stat -c %Y "${BUILD_START_PATH}")
-            BUILD_START_TIME="$(date -d "@$mtime" '+%Y-%m-%d %H:%M:%S %Z %z')"
-            BUILD_STOP_TIME="$(date '+%Y-%m-%d %H:%M:%S %Z %z')"
-        fi
-
-        read REPO_VERSION REPO_TIMESTAMP REPO_DIRTY <"${BUILD_START_PATH}"
-        rm -f "${BUILD_START_PATH}"
-        append_version_info
-    fi
-
-    return 0
-}
-
-write_version_info()
-( # BEGIN sub-shell
-    [ -d "${CROSSBUILD_DIR}" ] || return 1
-
-    cd "${SCRIPT_DIR}"
-    git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 1
-
-    local repo_status="$(git status --porcelain)"
-    local repo_dirty=""
-    local repo_modified=""
-    if [ -n "${repo_status}" ]; then
-        repo_dirty="yes"
-        repo_modified="-modified"
-    else
-        repo_dirty="no"
-        repo_status="(no differences or untracked files)"
-    fi
-
-    local repo_version="$(git rev-parse HEAD)"
-    local timestamp="$(git log -1 --format='@%ct')"
-    local timestamp_utc="$(date -u -d "${timestamp}" '+%Y%m%d%H%M%S')"
-    local timestamp_local="$(date -d "${timestamp}" '+%Y-%m-%d %H:%M:%S %Z %z')"
-    local temp_path=""
-
-    cleanup() { rm -f "${temp_path}"; }
-    trap 'cleanup; exit 130' INT
-    trap 'cleanup; exit 143' TERM
-    trap 'cleanup' EXIT
-    temp_path=$(mktemp "${VERSION_PATH}.XXXXXX")
-    {
-        printf '%s\n' '---------------------------------------------------------------'
-        printf 'RELEASE_VERSION        %s\n' "${RELEASE_VERSION}"
-        printf 'GIT_COMMIT             %s\n' "${repo_version}"
-        printf 'GIT_COMMIT_TIME        %s\n' "${timestamp_local}"
-        printf 'GIT_DIRTY              %s\n' "${repo_dirty}"
-        printf 'CPU_ARCHITECTURE       %s\n' "$(uname -m)"
-        printf '%s\n' '---------------------------------------------------------------'
-        printf '%s\n' "${repo_status}"
-        printf '%s\n' '---------------------------------------------------------------'
-        if [ -n "${repo_modified}" ]; then
-        printf '%s\n' "$(git diff)"
-        printf '%s\n' '---------------------------------------------------------------'
-        fi
-    } >"${temp_path}" || return 1
-    mv -f "${temp_path}" "${VERSION_PATH}" || return 1
-
-    temp_path=$(mktemp "${BUILD_START_PATH}.XXXXXX")
-    echo "${repo_version} ${timestamp} ${repo_dirty}" >"${temp_path}" || return 1
-    mv -f "${temp_path}" "${BUILD_START_PATH}" || return 1
-    trap - EXIT INT TERM
-
-    return 0
-) # END sub-shell
-
-append_version_info() {
-    {
-        printf 'BUILD_START_TIME       %s\n' "${BUILD_START_TIME}"
-        printf 'BUILD_STOP_TIME        %s\n' "${BUILD_STOP_TIME}"
-        printf '%s\n' '---------------------------------------------------------------'
-    } >>"${VERSION_PATH}"
-
-    return 0
-}
-
-archive_build_directory()
-( # BEGIN sub-shell
-    [ -n "$1" ]            || return 1
-    [ -n "$2" ]            || return 1
-
-    local repo_dir="$1"
-    local build_dir="$2"
-    local repo_subdir="$(basename -- "${repo_dir}")"
-    local build_subdir="$(basename -- "${build_dir}")"
-    local version_path="${build_dir}/VERSION"
-    local repo_filename=""
-    local repo_modified=""
-    local cached_path=""
-    local temp_path=""
-    local repo_version="${REPO_VERSION}"
-    local timestamp="${REPO_TIMESTAMP}"
-    local repo_dirty="${REPO_DIRTY}"
-    local host_cpu="$(uname -m)"
-
-    [ -d "${build_dir}" ] || return 1
-    [ "${repo_dirty}" = "yes" ] && repo_modified="-modified"
-
-    timestamp_utc="$(date -u -d "${timestamp}" '+%Y%m%d%H%M%S')"
-    repo_filename="${repo_subdir}-${host_cpu}-${timestamp_utc}${repo_modified}.tar.xz"
-    cached_path="${CACHED_DIR}/${repo_filename}"
-    [ -z "${repo_modified}" ] && [ -f "${cached_path}" ] && return 0
-
-    mkdir -p "${CACHED_DIR}"
-
-    cleanup() { rm -f "${temp_path}"; }
-    trap 'cleanup; exit 130' INT
-    trap 'cleanup; exit 143' TERM
-    trap 'cleanup' EXIT
-    temp_path=$(mktemp "${cached_path}.XXXXXX")
-    if ! tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" \
-            --exclude="${build_subdir}/src" \
-            --exclude="${build_subdir}/${STAGE}" \
-            --transform "s|^${build_subdir}|${build_subdir}-${host_cpu}+git-${repo_version}${repo_modified}|" \
-            -C "${PARENT_DIR}" "${build_subdir}" \
-            -cv | xz -zc -7e -T0 >"${temp_path}"; then
-        return 1
-    fi
-
-    touch -d "${timestamp}" "${temp_path}" || return 1
-    chmod 644 "${temp_path}" || return 1
-    mv -f "${temp_path}" "${cached_path}" || return 1
-    trap - EXIT INT TERM
-    sign_file "${cached_path}" # done
-
-    # create link designed to behave just like the downloaded release asset
-    local release_filename="${repo_subdir}-${host_cpu}-${RELEASE_VERSION}.tar.xz"
-    local release_path="${CACHED_DIR}/${release_filename}"
-    ln -sfn "${repo_filename}" "${release_path}"
-    ln -sfn "${repo_filename}.sha256" "${release_path}.sha256"
-
-    return 0
-) # END sub-shell
-
-################################################################################
-# Main
-#
-set +x
-install_dependencies
-echo ""
-echo ""
-echo "[*] Starting ARM cross-compiler build..."
-echo ""
-echo ""
-set -x
-
-
+download_and_compile() {
 ################################################################################
 # zlib-1.3.1
 (
@@ -1088,27 +906,19 @@ PKG_VERSION=1.3.1
 PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
 PKG_SOURCE_URL="https://github.com/madler/zlib/releases/download/v${PKG_VERSION}/${PKG_SOURCE}"
 PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
-PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
 PKG_HASH="38ef96b8dfe510d42707d9c781877914792541133e1870841463bfa73f883e32"
 
 mkdir -p "${SRC_ROOT}/${PKG_NAME}"
 cd "${SRC_ROOT}/${PKG_NAME}"
 
-if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
-    on_build_started
+if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
+    rm -rf "${PKG_SOURCE_SUBDIR}"
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
+    cd "${PKG_SOURCE_SUBDIR}"
 
-    rm -rf "${PKG_BUILD_SUBDIR}"
-    mkdir "${PKG_BUILD_SUBDIR}"
-    cd "${PKG_BUILD_SUBDIR}"
-
-    export PREFIX="${STAGE}"
-    export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
-    export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
-
-    ../${PKG_SOURCE_SUBDIR}/configure \
+    ./configure \
         --prefix="${PREFIX}" \
         --static \
     || handle_configure_error $?
@@ -1116,9 +926,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     $MAKE
     make install
 
-    rm -rf "${PREFIX}/lib/"*".so"*
-
-    touch "__package_installed"
+    touch __package_installed
 fi
 )
 
@@ -1136,31 +944,15 @@ mkdir -p "${SRC_ROOT}/${PKG_NAME}"
 cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
-    on_build_started
     rm -rf "${PKG_SOURCE_SUBDIR}"
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
     cd "${PKG_SOURCE_SUBDIR}"
 
-    PREFIX_TOOLCHAIN="${PREFIX}"
-
-    export PREFIX="${STAGE}"
-    export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
-    export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
-
     make clean || true
     $MAKE lib
     make install PREFIX=${PREFIX}
-
-    rm -rf "${PREFIX}/lib/"*".so"*
-
-    ## strip and verify statically-linked 
-    #finalize_build "${PREFIX}/bin/lz4"
-
-    ## install the program
-    #mkdir -p "${PREFIX_TOOLCHAIN}/bin/"
-    #cp -p "${PREFIX}/bin/lz4" "${PREFIX_TOOLCHAIN}/bin/"
 
     touch __package_installed
 fi
@@ -1174,29 +966,19 @@ PKG_VERSION=5.8.2
 PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
 PKG_SOURCE_URL="https://github.com/tukaani-project/xz/releases/download/v${PKG_VERSION}/${PKG_SOURCE}"
 PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
-PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
 PKG_HASH="890966ec3f5d5cc151077879e157c0593500a522f413ac50ba26d22a9a145214"
 
 mkdir -p "${SRC_ROOT}/${PKG_NAME}"
 cd "${SRC_ROOT}/${PKG_NAME}"
 
-if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
-    on_build_started
+if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
+    rm -rf "${PKG_SOURCE_SUBDIR}"
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
+    cd "${PKG_SOURCE_SUBDIR}"
 
-    rm -rf "${PKG_BUILD_SUBDIR}"
-    mkdir "${PKG_BUILD_SUBDIR}"
-    cd "${PKG_BUILD_SUBDIR}"
-
-    PREFIX_TOOLCHAIN="${PREFIX}"
-
-    export PREFIX="${STAGE}"
-    export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
-    export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
-
-    ../${PKG_SOURCE_SUBDIR}/configure \
+    ./configure \
         --enable-year2038 \
         --enable-static \
         --disable-shared \
@@ -1207,22 +989,13 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
         --disable-scripts \
         --disable-doc \
         --prefix="${PREFIX}" \
+        --host="${HOST}" \
     || handle_configure_error $?
 
     $MAKE
     make install
 
-    rm -rf "${PREFIX}/lib/"*".so"*
-
-    ## strip and verify statically-linked
-    #finalize_build "${PREFIX}/bin/xz"
-
-    ## install the program
-    #mkdir -p "${PREFIX_TOOLCHAIN}/bin/"
-    #cp -p "${PREFIX}/bin/xz" "${PREFIX_TOOLCHAIN}/bin/"
-    #cp -p "${PREFIX}/bin/lzma" "${PREFIX_TOOLCHAIN}/bin/"
-
-    touch "__package_installed"
+    touch __package_installed
 fi
 )
 
@@ -1240,254 +1013,86 @@ mkdir -p "${SRC_ROOT}/${PKG_NAME}"
 cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
-    on_build_started
     rm -rf "${PKG_SOURCE_SUBDIR}"
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "." "${PKG_SOURCE_VERSION}" "${PKG_SOURCE_SUBDIR}"
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
     cd "${PKG_SOURCE_SUBDIR}"
 
-    PREFIX_TOOLCHAIN="${PREFIX}"
-
-    export PREFIX="${STAGE}"
-    export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
-    export CPPFLAGS="-I${PREFIX}/include -D_GNU_SOURCE"
-
     $MAKE zstd \
         LDFLAGS="-static ${LDFLAGS}" \
-        CPPFLAGS="${CPPFLAGS}"
+        CFLAGS="${CFLAGS}" \
         LIBS="${PREFIX}/lib/libz.a ${PREFIX}/lib/liblzma.a ${PREFIX}/lib/liblz4.a"
 
     make install
 
-    rm -rf "${PREFIX}/lib/"*".so"*
-
-    # strip and verify statically-linked
+    # strip and verify there are no dependencies for static build
     finalize_build "${PREFIX}/bin/zstd"
-
-    # install the program
-    mkdir -p "${PREFIX_TOOLCHAIN}/bin/"
-    cp -p "${PREFIX}/bin/zstd" "${PREFIX_TOOLCHAIN}/bin/"
 
     touch __package_installed
 fi
 )
 
 ################################################################################
-# binutils-2.45
+# gmp-6.3.0
 (
-PKG_NAME=binutils
-PKG_VERSION=2.45
+PKG_NAME=gmp
+PKG_VERSION=6.3.0
 PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
-PKG_SOURCE_URL="https://ftp.gnu.org/gnu/binutils/${PKG_SOURCE}"
+PKG_SOURCE_URL="https://ftp.gnu.org/gnu/gmp/${PKG_SOURCE}"
 PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
-PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
-PKG_HASH="c50c0e7f9cb188980e2cc97e4537626b1672441815587f1eab69d2a1bfbef5d2"
-
-mkdir -p "${SRC_ROOT}/${PKG_NAME}"
-cd "${SRC_ROOT}/${PKG_NAME}"
-
-if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
-    on_build_started
-    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
-    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
-    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
-
-    rm -rf "${PKG_BUILD_SUBDIR}"
-    mkdir "${PKG_BUILD_SUBDIR}"
-    cd "${PKG_BUILD_SUBDIR}"
-
-    export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
-    export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
-    export PKG_CONFIG="pkg-config"
-    export PKG_CONFIG_LIBDIR="${STAGE}/lib/pkgconfig"
-    unset PKG_CONFIG_PATH
-
-    ../${PKG_SOURCE_SUBDIR}/configure \
-        --prefix="${PREFIX}" \
-        --target=${TARGET} \
-        --with-system-zlib \
-        --with-zstd \
-        --enable-compressed-debug-sections=ld \
-        --enable-default-compressed-debug-sections-algorithm=zlib \
-        --disable-nls \
-        --disable-werror \
-        ac_cv_prog_with_compressed_debug_sections=yes \
-    || handle_configure_error $?
-
-    $MAKE
-    make install
-
-    touch "__package_installed"
-fi
-)
-
-################################################################################
-# linux-2.6.36.4
-(
-PKG_NAME=linux
-PKG_VERSION=2.6.36.4
-PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
-PKG_SOURCE_URL="https://www.kernel.org/pub/linux/kernel/v$(echo "$PKG_VERSION" | cut -d. -f1,2)/${PKG_SOURCE}"
-PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
-PKG_HASH="70d124743041974e1220fb39465627ded1df0fdd46da6cd74f6e3da414194d03"
+PKG_HASH="a3c2b80201b89e68616f4ad30bc66aee4927c3ce50e33929ca819d5c43538898"
 
 mkdir -p "${SRC_ROOT}/${PKG_NAME}"
 cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
-    on_build_started
     rm -rf "${PKG_SOURCE_SUBDIR}"
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
     cd "${PKG_SOURCE_SUBDIR}"
 
-    make ARCH=arm INSTALL_HDR_PATH="${SYSROOT}/usr" headers_install
-
-    touch "__package_installed"
-fi
-)
-
-################################################################################
-# gcc-15.2.0 (bootstrap gcc)
-(
-PKG_NAME=gcc
-PKG_VERSION=15.2.0
-PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
-PKG_SOURCE_URL="https://ftp.gnu.org/gnu/gcc/${PKG_NAME}-${PKG_VERSION}/${PKG_SOURCE}"
-PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
-PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build-bootstrap"
-PKG_HASH="438fd996826b0c82485a29da03a72d71d6e3541a83ec702df4271f6fe025d24e"
-
-mkdir -p "${SRC_ROOT}/${PKG_NAME}"
-cd "${SRC_ROOT}/${PKG_NAME}"
-
-if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed__gcc" ]; then
-    on_build_started
-    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
-    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
-    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
-
-    rm -rf "${PKG_BUILD_SUBDIR}"
-    mkdir "${PKG_BUILD_SUBDIR}"
-    cd "${PKG_BUILD_SUBDIR}"
-
-    ../${PKG_SOURCE_SUBDIR}/configure \
-        --target=${TARGET} \
+    ./configure \
         --prefix="${PREFIX}" \
-        --without-headers \
-        --enable-languages=c \
-        --disable-threads \
+        --host="${HOST}" \
+        --enable-static \
         --disable-shared \
-        --disable-multilib \
-        --disable-nls \
-        --disable-libssp \
-        --disable-libquadmath \
-        --disable-libgomp \
-        --disable-libsanitizer \
-        --disable-libstdcxx-pch \
-        --disable-libgcov \
+        --disable-assembly \
     || handle_configure_error $?
 
-    $MAKE all-gcc
-    make install-gcc
+    $MAKE
+    make install
 
-    touch "__package_installed__gcc"
+    touch "__package_installed"
 fi
 )
 
 ################################################################################
-# gcc-15.2.0 (bootstrap libgcc)
+# mpfr-4.2.2
 (
-PKG_NAME=gcc
-PKG_VERSION=15.2.0
+PKG_NAME=mpfr
+PKG_VERSION=4.2.2
+PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
+PKG_SOURCE_URL="https://ftp.gnu.org/gnu/mpfr/${PKG_SOURCE}"
 PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
-PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build-bootstrap"
-
-cd "${SRC_ROOT}/${PKG_NAME}"
-
-if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed__libgcc" ]; then
-    on_build_started
-
-    cd "${PKG_BUILD_SUBDIR}"
-
-    $MAKE all-target-libgcc
-    make install-target-libgcc
-
-    touch "__package_installed__libgcc"
-fi
-)
-
-################################################################################
-# musl-1.2.5
-(
-PKG_NAME=musl
-PKG_VERSION=1.2.5
-PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.gz"
-PKG_SOURCE_URL="https://musl.libc.org/releases/${PKG_SOURCE}"
-PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
-PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
-PKG_HASH="a9a118bbe84d8764da0ea0d28b3ab3fae8477fc7e4085d90102b8596fc7c75e4"
+PKG_HASH="b67ba0383ef7e8a8563734e2e889ef5ec3c3b898a01d00fa0a6869ad81c6ce01"
 
 mkdir -p "${SRC_ROOT}/${PKG_NAME}"
 cd "${SRC_ROOT}/${PKG_NAME}"
 
-if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
-    on_build_started
+if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
+    rm -rf "${PKG_SOURCE_SUBDIR}"
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
+    cd "${PKG_SOURCE_SUBDIR}"
 
-    rm -rf "${PKG_BUILD_SUBDIR}"
-    mkdir "${PKG_BUILD_SUBDIR}"
-    cd "${PKG_BUILD_SUBDIR}"
-
-    export CROSS_COMPILE=${CROSS_PREFIX}
-
-    ../${PKG_SOURCE_SUBDIR}/configure \
-        --prefix="${SYSROOT}" \
-        --target=${TARGET} \
-        --syslibdir=/lib \
-        --with-headers="${SYSROOT}/include" \
-    || handle_configure_error $?
-
-    $MAKE
-    make install
-
-    touch "__package_installed"
-fi
-)
-
-################################################################################
-# gcc-15.2.0 (final)
-(
-PKG_NAME=gcc
-PKG_VERSION=15.2.0
-PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
-PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build-final"
-
-cd "${SRC_ROOT}/${PKG_NAME}"
-
-if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
-    on_build_started
-
-    rm -rf "${PKG_BUILD_SUBDIR}"
-    mkdir "${PKG_BUILD_SUBDIR}"
-    cd "${PKG_BUILD_SUBDIR}"
-
-    ../${PKG_SOURCE_SUBDIR}/configure \
-        --target=${TARGET} \
+    ./configure \
         --prefix="${PREFIX}" \
-        --with-sysroot="${SYSROOT}" \
-        --enable-languages=c,c++ \
-        --enable-year2038 \
-        --enable-shared \
-        --disable-multilib \
-        --disable-nls \
-        --disable-libsanitizer \
-        --with-arch=armv7-a --with-tune=cortex-a9 --with-float=soft --with-abi=aapcs-linux \
-        --enable-cxx-flags='-march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux' \
+        --host="${HOST}" \
+        --enable-static \
+        --disable-shared \
     || handle_configure_error $?
 
     $MAKE
@@ -1498,21 +1103,20 @@ fi
 )
 
 ################################################################################
-# gdb-17.1 (client)
+# gdb-17.1
 (
 PKG_NAME=gdb
 PKG_VERSION=17.1
 PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
 PKG_SOURCE_URL="https://ftp.gnu.org/gnu/gdb/${PKG_SOURCE}"
 PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
-PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
+PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build-targetdevice"
 PKG_HASH="14996f5f74c9f68f5a543fdc45bca7800207f91f92aeea6c2e791822c7c6d876"
 
 mkdir -p "${SRC_ROOT}/${PKG_NAME}"
 cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
-    on_build_started
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
@@ -1521,23 +1125,18 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     mkdir "${PKG_BUILD_SUBDIR}"
     cd "${PKG_BUILD_SUBDIR}"
 
-    export LDFLAGS="-L${STAGE}/lib -Wl,--gc-sections"
-    export CPPFLAGS="-I${STAGE}/include -D_GNU_SOURCE"
-    export PKG_CONFIG="pkg-config"
-    export PKG_CONFIG_LIBDIR="${STAGE}/lib/pkgconfig"
-    unset PKG_CONFIG_PATH
-
     ../${PKG_SOURCE_SUBDIR}/configure \
-        --target=${TARGET} \
         --prefix="${PREFIX}" \
-        --with-sysroot="${SYSROOT}" \
+        --host="${HOST}" \
         --with-static-standard-libraries \
         --enable-year2038 \
         --disable-nls \
         --disable-werror \
+        --disable-tui \
         --without-python \
+        --without-guile \
         --with-expat \
-        --with-system-zlib \
+        --with-zlib \
         --with-zstd \
         --enable-compressed-debug-sections=ld \
         --enable-default-compressed-debug-sections-algorithm=zlib \
@@ -1546,84 +1145,38 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     $MAKE
     make install
 
-    ## strip and verify statically-linked
-    #finalize_build "${PREFIX}/bin/${CROSS_PREFIX}gdb"
+    # strip and verify statically-linked
+    finalize_build "${PREFIX}/bin/gdb"
+                   "${PREFIX}/bin/gdbserver"
 
     touch "__package_installed"
 fi
 )
 
+return 0
+} #END download_and_compile
 
 ################################################################################
-# Done compiling the toolchain
+# Create install package
 #
-on_build_finished
-
-################################################################################
-# Archive the built toolchain
-#
+create_install_package() {
 set +x
 echo ""
 echo ""
-echo "[*] Finished compiling."
+echo "[*] Finished building Transmission ${BUILD_TRANSMISSION_VERSION}"
 echo ""
 echo ""
-echo "[*] Now archiving the built toolchain (this may take a while)..."
-echo ""
-echo ""
-set -x
-archive_build_directory "${SCRIPT_DIR}" "${CROSSBUILD_DIR}"
+add_items_to_install_package "bin/transmission-cli" \
+                             "bin/transmission-create" \
+                             "bin/transmission-daemon" \
+                             "bin/transmission-edit" \
+                             "bin/transmission-remote" \
+                             "bin/transmission-show" \
+                             "share/transmission"
+return 0
+}
 
-################################################################################
-# Interpreter path for running dynamically-linked executables on this device.
-#
-# Normally, cross-compiled programs do not run on the host, but the Raspberry Pi
-# is backwards compatible with ARMv7 soft-float programs.  The actual target
-# devices are things like home routers, smart tv's, smart phone, etc.  So, this
-# is really only for convenience for Pi users, to test programs on the host.
-#
-# If you only create statically-linked executables, then you don't even need to
-# do this.
-# 
-if is_arm; then
-    if [ ! -f "/lib/ld-musl-arm.so.1" ]; then
-        if ! sudo -n true 2>/dev/null; then
-            echo "Password required."
-        else
-            sudo ln -sfn "${SYSROOT}/lib/libc.so" "/lib/ld-musl-arm.so.1"
-        fi
-    fi
-fi
 
-################################################################################
-# Shortcut to top-level of this toolchain
-#
-TOPDIR=/xcc
-if [ ! -d "${TOPDIR}" ]; then
-    if ! sudo -n true 2>/dev/null; then
-        echo "Password required."
-    else
-        sudo ln -sfn "${CROSSBUILD_DIR}" "${TOPDIR}"
-    fi
-fi
-
-################################################################################
-# Show example
-#
-set +e
-set +x
-echo ""
-echo ""
-echo "Environment variables for cross-compiling:"
-echo ""
-echo "export PREFIX=\"${CROSSBUILD_DIR}\""
-echo "export TARGET=arm-linux-musleabi"
-echo 'export PATH="${PREFIX}/bin:${PATH}"'
-echo ""
-echo "Usage examples:"
-echo ""
-echo "arm-linux-musleabi-gcc -static hello.c -o hello"
-echo "    -OR-"
-echo "arm-linux-musleabi-gcc hello.c -o hello"
-echo ""
+main
+echo "Script exited cleanly."
 
