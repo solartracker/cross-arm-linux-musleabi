@@ -1660,6 +1660,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
 
     ../${PKG_SOURCE_SUBDIR}/configure \
         --prefix="${PREFIX}" \
+        --host="${HOST}" \
         --static \
     || handle_configure_error $?
 
@@ -1771,6 +1772,8 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     unset PKG_CONFIG_PATH
 
     ../${PKG_SOURCE_SUBDIR}/configure \
+        --prefix="${PREFIX}" \
+        --host="${HOST}" \
         --enable-year2038 \
         --enable-static \
         --disable-shared \
@@ -1780,7 +1783,6 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
         --disable-rpath \
         --disable-scripts \
         --disable-doc \
-        --prefix="${PREFIX}" \
     || handle_configure_error $?
 
     $MAKE
