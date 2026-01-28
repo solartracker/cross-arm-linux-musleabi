@@ -1159,9 +1159,8 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
-    cd "${PKG_SOURCE_SUBDIR}"
 
-    apply_patches "${SCRIPT_DIR}/patches/${PKG_NAME}/${PKG_SOURCE_SUBDIR}/solartracker" "."
+    apply_patches "${SCRIPT_DIR}/patches/${PKG_NAME}/${PKG_SOURCE_SUBDIR}/solartracker" "${PKG_SOURCE_SUBDIR}"
 
     rm -rf "${PKG_BUILD_SUBDIR}"
     mkdir "${PKG_BUILD_SUBDIR}"
