@@ -30,21 +30,16 @@ FILE_DOWNLOADER='use_wget'
 set -e
 set -x
 
-################################################################################
-# General
-
+main() {
+export TARGET=arm-linux-musleabi
 RELEASE_VERSION=0.2.0
+HOST_CPU="$(uname -m)"
 
 CROSSBUILD_DIR="${SCRIPT_DIR}-build"
 mkdir -p "${CROSSBUILD_DIR}"
 
 BUILD_START_PATH="${CROSSBUILD_DIR}/.build_start"
 VERSION_PATH="${CROSSBUILD_DIR}/VERSION"
-
-SRC_ROOT="${CROSSBUILD_DIR}/src"
-mkdir -p "$SRC_ROOT"
-
-export TARGET=arm-linux-musleabi
 
 export PREFIX="${CROSSBUILD_DIR}"
 export HOST=${TARGET}
@@ -65,16 +60,34 @@ case "${HOST_CPU}" in
         ;;
 esac
 
+SRC_ROOT="${CROSSBUILD_DIR}/src/${TARGET}"
+mkdir -p "$SRC_ROOT"
+
 MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
 #MAKE="make -j1"                                  # one job at a time
 
 STAGE="${PREFIX}/stage"
 mkdir -p "${STAGE}"
 
+check_dependencies
+download_and_compile
+archive_and_configuration
+
+return 0
+} #END main()
+
 
 ################################################################################
 # Host dependencies
 #
+
+check_dependencies() {
+set +x
+install_dependencies
+set -x
+
+return 0
+} #END check_dependencies()
 
 prompt_install_choice() {
     echo
@@ -841,7 +854,7 @@ restore_shared_libraries() {
     return 0
 }
 
-create_install_package()
+add_items_to_install_package()
 ( # BEGIN sub-shell
     [ "$#" -gt 0 ] || return 1
     [ -n "$PKG_ROOT" ]            || return 1
@@ -1067,18 +1080,15 @@ archive_build_directory()
     return 0
 ) # END sub-shell
 
-################################################################################
-# Main
-#
+
+download_and_compile() {
 set +x
-install_dependencies
 echo ""
 echo ""
 echo "[*] Starting ARM cross-compiler build..."
 echo ""
 echo ""
 set -x
-
 
 ################################################################################
 # zlib-1.3.1
@@ -1553,12 +1563,16 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
 fi
 )
 
-
 ################################################################################
 # Done compiling the toolchain
 #
 on_build_finished
 
+return 0
+} #END download_and_compile()
+
+
+archive_and_configuration() {
 ################################################################################
 # Archive the built toolchain
 #
@@ -1626,4 +1640,11 @@ echo "arm-linux-musleabi-gcc -static hello.c -o hello"
 echo "    -OR-"
 echo "arm-linux-musleabi-gcc hello.c -o hello"
 echo ""
+
+return 0
+} #END archive_and_configuration()
+
+
+main
+echo "Script exited cleanly."
 
