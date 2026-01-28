@@ -472,8 +472,8 @@ apply_patch() {
 
     if [ -f "${patch_path}" ]; then
         echo "Applying patch: ${patch_path}"
-        if patch --dry-run --silent -p1 -d "${target_dir}/" -i "${patch_path}"; then
-            if ! patch -p1 -d "${target_dir}/" -i "${patch_path}"; then
+        if patch --dry-run --silent -p1 --forward --batch -d "${target_dir}/" -i "${patch_path}"; then
+            if ! patch -p1 --forward --batch -d "${target_dir}/" -i "${patch_path}"; then
                 echo "The patch failed."
                 return 1
             fi
