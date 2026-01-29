@@ -1402,6 +1402,7 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
         --with-zstd \
         --enable-compressed-debug-sections=ld \
         --enable-default-compressed-debug-sections-algorithm=zlib \
+        ZSTD_LIBS="${PREFIX}/lib/libzstd.a" \
     || handle_configure_error $?
 
     $MAKE
