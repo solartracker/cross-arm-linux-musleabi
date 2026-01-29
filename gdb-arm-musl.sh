@@ -65,7 +65,7 @@ case "${HOST_CPU}" in
         LDD="${SYSROOT}/lib/libc.so --list"
         ;;
     *)
-        LDD="ldd"
+        LDD="true"
         ;;
 esac
 
@@ -867,6 +867,25 @@ add_items_to_install_package()
     return 0
 ) # END sub-shell
 
+################################################################################
+# Create install package
+#
+create_install_package() {
+set +x
+echo ""
+echo ""
+echo "[*] Finished building Transmission ${BUILD_TRANSMISSION_VERSION}"
+echo ""
+echo ""
+add_items_to_install_package "bin/transmission-cli" \
+                             "bin/transmission-create" \
+                             "bin/transmission-daemon" \
+                             "bin/transmission-edit" \
+                             "bin/transmission-remote" \
+                             "bin/transmission-show" \
+                             "share/transmission"
+return 0
+}
 
 ################################################################################
 # Install the build environment
@@ -1403,7 +1422,7 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
         --enable-compressed-debug-sections=ld \
         --enable-default-compressed-debug-sections-algorithm=zlib \
         LDFLAGS="-static ${LDFLAGS}" \
-        ZSTD_LIBS="${PREFIX}/lib/libzstd.a" \
+        LIBS="${PREFIX}/lib/libzstd.a" \
     || handle_configure_error $?
 
     $MAKE
@@ -1421,26 +1440,6 @@ fi
 
 return 0
 } #END download_and_compile
-
-################################################################################
-# Create install package
-#
-create_install_package() {
-set +x
-echo ""
-echo ""
-echo "[*] Finished building Transmission ${BUILD_TRANSMISSION_VERSION}"
-echo ""
-echo ""
-add_items_to_install_package "bin/transmission-cli" \
-                             "bin/transmission-create" \
-                             "bin/transmission-daemon" \
-                             "bin/transmission-edit" \
-                             "bin/transmission-remote" \
-                             "bin/transmission-show" \
-                             "share/transmission"
-return 0
-}
 
 
 main
