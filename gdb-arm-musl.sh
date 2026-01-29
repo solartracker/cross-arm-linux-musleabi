@@ -1374,7 +1374,7 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
 
     apply_patches "${SCRIPT_DIR}/patches/${PKG_NAME}/${PKG_SOURCE_SUBDIR}/solartracker" "."
 
-    #hide_shared_libraries
+    hide_shared_libraries
 
     ./configure \
         --prefix="${PREFIX}" \
@@ -1409,7 +1409,7 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     $MAKE
     make install
 
-    #restore_shared_libraries
+    restore_shared_libraries
 
     # strip and verify statically-linked
     finalize_build "${PREFIX}/bin/gdb" \
