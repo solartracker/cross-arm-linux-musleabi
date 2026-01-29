@@ -472,7 +472,7 @@ clone_github()
             mv -f "${temp_path}" "${cached_path}" || return 1
             rm -rf "${temp_dir}" || return 1
             trap - EXIT INT TERM
-            sign_file "${cached_path}"
+            sign_file "${cached_path}" "full_extract"
         else
             cleanup() { rm -f "${cached_path}"; }
             trap 'cleanup; exit 130' INT
