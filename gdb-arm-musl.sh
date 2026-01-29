@@ -131,8 +131,8 @@ sign_file()
 
     if [ -z "${option}" ]; then
         target_file_hash="$(sha256sum "${target_path}" | awk '{print $1}')"
-    elif [ "${option}" == "tar_extract" ]; then
-        target_file_hash="$(tar -xJOf "${target_path}" | sha256sum | awk '{print $1}')"
+    elif [ "${option}" == "full_extract" ]; then
+        target_file_hash="$(hash_archive "${target_path}")"
     elif [ "${option}" == "xz_extract" ]; then
         target_file_hash="$(xz -dc "${target_path}" | sha256sum | awk '{print $1}')"
     else
@@ -162,6 +162,53 @@ sign_file()
     return 0
 ) # END sub-shell
 
+hash_dir()
+( # BEGIN sub-shell
+    [ -n "$1" ] || return 1
+
+    dir_path="$1"
+
+    cleanup() { :; }
+    trap 'cleanup; exit 130' INT
+    trap 'cleanup; exit 143' TERM
+    trap 'cleanup' EXIT
+    cd "${dir_path}" || return 1
+    (
+        find ./ -type f | sort | while IFS= read -r f; do
+            set +x
+            echo "${f}"        # include the path
+            cat "${f}"         # include the contents
+        done
+    ) | sha256sum | awk '{print $1}'
+
+    return 0
+) # END sub-shell
+
+hash_archive()
+( # BEGIN sub-shell
+    [ -n "$1" ] || return 1
+
+    source_path="$1"
+    target_dir="$(dirname "${source_path}")"
+    target_file="$(basename "${source_path}")"
+
+    cd "${target_dir}" || return 1
+
+    cleanup() { rm -rf "${dir_tmp}"; }
+    trap 'cleanup; exit 130' INT
+    trap 'cleanup; exit 143' TERM
+    trap 'cleanup' EXIT
+    dir_tmp=$(mktemp -d "${target_file}.XXXXXX")
+    mkdir -p "${dir_tmp}"
+    if ! extract_package "${source_path}" "${dir_tmp}" >/dev/null 2>&1; then
+        return 1
+    else
+        hash_dir "${dir_tmp}"
+    fi
+
+    return 0
+) # END sub-shell
+
 # Checksum verification for downloaded file
 verify_hash() {
     [ -n "$1" ] || return 1
@@ -179,13 +226,11 @@ verify_hash() {
     fi
 
     if [ -z "${option}" ]; then
-        # hash the compressed binary file. this method is best when downloading
-        # compressed binary files.
+        # hash the compressed binary archive itself
         actual="$(sha256sum "${file_path}" | awk '{print $1}')"
-    elif [ "${option}" == "tar_extract" ]; then
-        # hash the data, file names, directory names. this method is best when
-        # archiving Github repos.
-        actual="$(tar -xJOf "${file_path}" | sha256sum | awk '{print $1}')"
+    elif [ "${option}" == "full_extract" ]; then
+        # hash the data inside the compressed binary archive
+        actual="$(hash_archive "${file_path}")"
     elif [ "${option}" == "xz_extract" ]; then
         # hash the data, file names, directory names, timestamps, permissions, and
         # tar internal structures. this method is not as "future-proof" for archiving
@@ -1265,6 +1310,48 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     touch "__package_installed"
 fi
 )
+
+################################################################################
+# xxHash-0.8.3
+(
+PKG_NAME=xxHash
+PKG_VERSION="0.8.3+git"
+PKG_SOURCE_URL="https://github.com/Cyan4973/xxHash.git"
+PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
+PKG_SOURCE_VERSION="e626a72bc2321cd320e953a0ccf1584cad60f363"
+PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}-${PKG_SOURCE_VERSION}.tar.xz"
+PKG_HASH_VERIFY="full_extract"
+PKG_HASH="ae83002690aba91a210f3efc2dbf00aee5266f9b68f47b1130c95dd6a1a48e4b"
+
+mkdir -p "${SRC_ROOT}/${PKG_NAME}"
+cd "${SRC_ROOT}/${PKG_NAME}"
+
+if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
+    rm -rf "${PKG_SOURCE_SUBDIR}"
+    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
+    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
+    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
+    cd "${PKG_SOURCE_SUBDIR}"
+
+    # Compile the source into an object file
+    $CC $CFLAGS -c xxhash.c -o xxhash.o
+
+    # Archive into a static library
+    $AR rcs libxxhash.a xxhash.o
+
+    # Index the archive
+    $RANLIB libxxhash.a
+
+    # Install headers and static library (optional)
+    mkdir -p $PREFIX/include
+    mkdir -p $PREFIX/lib
+    cp xxhash.h $PREFIX/include/
+    cp libxxhash.a $PREFIX/lib/
+
+    touch "__package_installed"
+fi
+)
+exit 1
 
 ################################################################################
 # gdb-17.1
