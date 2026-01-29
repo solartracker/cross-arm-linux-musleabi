@@ -1334,19 +1334,19 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     cd "${PKG_SOURCE_SUBDIR}"
 
     # Compile the source into an object file
-    $CC $CFLAGS -c xxhash.c -o xxhash.o
+    ${CC} ${CFLAGS} -c xxhash.c -o xxhash.o
 
     # Archive into a static library
-    $AR rcs libxxhash.a xxhash.o
+    ${AR} rcs libxxhash.a xxhash.o
 
     # Index the archive
-    $RANLIB libxxhash.a
+    ${RANLIB} libxxhash.a
 
     # Install headers and static library (optional)
-    mkdir -p $PREFIX/include
-    mkdir -p $PREFIX/lib
-    cp xxhash.h $PREFIX/include/
-    cp libxxhash.a $PREFIX/lib/
+    mkdir -p ${PREFIX}/include
+    mkdir -p ${PREFIX}/lib
+    cp -p xxhash.h ${PREFIX}/include/
+    cp -p libxxhash.a ${PREFIX}/lib/
 
     touch "__package_installed"
 fi
