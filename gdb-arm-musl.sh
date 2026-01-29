@@ -1167,9 +1167,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     mkdir "${PKG_BUILD_SUBDIR}"
     cd "${PKG_BUILD_SUBDIR}"
 
-    export LDFLAGS="-static ${LDFLAGS}"
-    export LIBS="${PREFIX}/lib/libzstd.a"
-
+    hide_shared_libraries
     ../${PKG_SOURCE_SUBDIR}/configure \
         --prefix="${PREFIX}" \
         --host="${HOST}" \
@@ -1188,6 +1186,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
         --enable-compressed-debug-sections=ld \
         --enable-default-compressed-debug-sections-algorithm=zlib \
     || handle_configure_error $?
+    restore_shared_libraries
 
     $MAKE
     make install
