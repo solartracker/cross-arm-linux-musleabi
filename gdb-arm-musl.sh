@@ -818,7 +818,7 @@ add_items_to_install_package()
 
     local ready=true
     for f in "$@"; do
-        [ -e "${f}" ] || { ready=false; echo "missing: ${f}" >&2; }
+        [ -e "${PREFIX}/${f}" ] || { ready=false; echo "missing: ${f}" >&2; }
     done
     ready || return 1
 
