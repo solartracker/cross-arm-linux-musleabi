@@ -131,9 +131,9 @@ sign_file()
 
     if [ -z "${option}" ]; then
         target_file_hash="$(sha256sum "${target_path}" | awk '{print $1}')"
-    elif [ "${option}" == "full_extract" ]; then
+    elif [ "${option}" = "full_extract" ]; then
         target_file_hash="$(hash_archive "${target_path}")"
-    elif [ "${option}" == "xz_extract" ]; then
+    elif [ "${option}" = "xz_extract" ]; then
         target_file_hash="$(xz -dc "${target_path}" | sha256sum | awk '{print $1}')"
     else
         return 1
@@ -228,10 +228,10 @@ verify_hash() {
     if [ -z "${option}" ]; then
         # hash the compressed binary archive itself
         actual="$(sha256sum "${file_path}" | awk '{print $1}')"
-    elif [ "${option}" == "full_extract" ]; then
+    elif [ "${option}" = "full_extract" ]; then
         # hash the data inside the compressed binary archive
         actual="$(hash_archive "${file_path}")"
-    elif [ "${option}" == "xz_extract" ]; then
+    elif [ "${option}" = "xz_extract" ]; then
         # hash the data, file names, directory names, timestamps, permissions, and
         # tar internal structures. this method is not as "future-proof" for archiving
         # Github repos because it is possible that the tar internal structures
@@ -1321,7 +1321,7 @@ PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
 PKG_SOURCE_VERSION="e626a72bc2321cd320e953a0ccf1584cad60f363"
 PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}-${PKG_SOURCE_VERSION}.tar.xz"
 PKG_HASH_VERIFY="full_extract"
-PKG_HASH="_"
+PKG_HASH=""
 
 mkdir -p "${SRC_ROOT}/${PKG_NAME}"
 cd "${SRC_ROOT}/${PKG_NAME}"
