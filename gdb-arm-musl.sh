@@ -1073,6 +1073,131 @@ fi
 )
 
 ################################################################################
+# libiconv-1.18
+(
+PKG_NAME=libiconv
+PKG_VERSION=1.18
+PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.gz"
+PKG_SOURCE_URL="https://ftp.gnu.org/gnu/${PKG_NAME}/${PKG_SOURCE}"
+PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
+PKG_HASH="3b08f5f4f9b4eb82f151a7040bfd6fe6c6fb922efe4b1659c66ea933276965e8"
+
+mkdir -p "${SRC_ROOT}/${PKG_NAME}"
+cd "${SRC_ROOT}/${PKG_NAME}"
+
+if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
+    rm -rf "${PKG_SOURCE_SUBDIR}"
+    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
+    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
+    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
+    cd "${PKG_SOURCE_SUBDIR}"
+
+    ./configure \
+        --prefix="${PREFIX}" \
+        --host="${HOST}" \
+        --enable-static \
+        --disable-shared \
+        --disable-rpath \
+        --disable-nls \
+        --disable-dependency-tracking \
+        --disable-silent-rules \
+        --enable-year2038 \
+    || handle_configure_error $?
+
+    $MAKE
+    make install
+
+    touch __package_installed
+fi
+)
+
+################################################################################
+# libunistring-1.4.1
+(
+PKG_NAME=libunistring
+PKG_VERSION=1.4.1
+PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.gz"
+PKG_SOURCE_URL="https://ftp.gnu.org/gnu/${PKG_NAME}/${PKG_SOURCE}"
+PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
+PKG_HASH="12542ad7619470efd95a623174dcd4b364f2483caf708c6bee837cb53a54cb9d"
+
+mkdir -p "${SRC_ROOT}/${PKG_NAME}"
+cd "${SRC_ROOT}/${PKG_NAME}"
+
+if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
+    rm -rf "${PKG_SOURCE_SUBDIR}"
+    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
+    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
+    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
+    cd "${PKG_SOURCE_SUBDIR}"
+
+    ./configure \
+        --prefix="${PREFIX}" \
+        --host="${HOST}" \
+        --enable-static \
+        --disable-shared \
+        --disable-rpath \
+        --disable-dependency-tracking \
+        --disable-silent-rules \
+        --enable-year2038 \
+    || handle_configure_error $?
+
+    $MAKE
+    make install
+
+    touch __package_installed
+fi
+)
+
+################################################################################
+# gettext-0.26
+(
+PKG_NAME=gettext
+PKG_VERSION=0.26
+PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.gz"
+PKG_SOURCE_URL="https://ftp.gnu.org/gnu/${PKG_NAME}/${PKG_SOURCE}"
+PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
+PKG_HASH="39acf4b0371e9b110b60005562aace5b3631fed9b1bb9ecccfc7f56e58bb1d7f"
+
+mkdir -p "${SRC_ROOT}/${PKG_NAME}"
+cd "${SRC_ROOT}/${PKG_NAME}"
+
+if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
+    rm -rf "${PKG_SOURCE_SUBDIR}"
+    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
+    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
+    unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
+    cd "${PKG_SOURCE_SUBDIR}"
+
+    ./configure \
+        --prefix="${PREFIX}" \
+        --host="${HOST}" \
+        --enable-static \
+        --disable-shared \
+        --disable-rpath \
+        --disable-nls \
+        --disable-tools \
+        --disable-csharp \
+        --disable-java \
+        --disable-modula2 \
+        --disable-d \
+        --disable-libasprintf \
+        --disable-openmp \
+        --disable-curses \
+        --without-gettext \
+        --disable-dependency-tracking \
+        --disable-silent-rules \
+        --enable-year2038 \
+    || handle_configure_error $?
+
+    $MAKE
+    make install
+
+    touch __package_installed
+fi
+)
+
+################################################################################
 # gmp-6.3.0
 (
 PKG_NAME=gmp
@@ -1149,36 +1274,40 @@ PKG_VERSION=17.1
 PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}.tar.xz"
 PKG_SOURCE_URL="https://ftp.gnu.org/gnu/gdb/${PKG_SOURCE}"
 PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
-PKG_BUILD_SUBDIR="${PKG_SOURCE_SUBDIR}-build"
 PKG_HASH="14996f5f74c9f68f5a543fdc45bca7800207f91f92aeea6c2e791822c7c6d876"
 
 mkdir -p "${SRC_ROOT}/${PKG_NAME}"
 cd "${SRC_ROOT}/${PKG_NAME}"
 
-if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
+if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     rm -rf "${PKG_SOURCE_SUBDIR}"
     download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
+    cd "${PKG_SOURCE_SUBDIR}"
 
-    apply_patches "${SCRIPT_DIR}/patches/${PKG_NAME}/${PKG_SOURCE_SUBDIR}/solartracker" "${PKG_SOURCE_SUBDIR}"
+    apply_patches "${SCRIPT_DIR}/patches/${PKG_NAME}/${PKG_SOURCE_SUBDIR}/solartracker" "."
 
-    rm -rf "${PKG_BUILD_SUBDIR}"
-    mkdir "${PKG_BUILD_SUBDIR}"
-    cd "${PKG_BUILD_SUBDIR}"
+    #hide_shared_libraries
 
-    hide_shared_libraries
-
-    ../${PKG_SOURCE_SUBDIR}/configure \
+    ./configure \
         --prefix="${PREFIX}" \
         --host="${HOST}" \
         --enable-static \
         --disable-shared \
         --with-static-standard-libraries \
         --enable-year2038 \
+        --enable-threading=yes \
+        --disable-libbacktrace \
+        --disable-rpath \
         --disable-nls \
         --disable-werror \
         --disable-tui \
+        --disable-unit-tests \
+        --disable-profiling \
+        --disable-gdb-compile \
+        --disable-source-highlight \
+        --disable-libctf \
         --without-python \
         --without-guile \
         --with-expat \
@@ -1191,7 +1320,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     $MAKE
     make install
 
-    restore_shared_libraries
+    #restore_shared_libraries
 
     # strip and verify statically-linked
     finalize_build "${PREFIX}/bin/gdb" \
