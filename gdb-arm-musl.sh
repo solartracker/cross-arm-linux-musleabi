@@ -1321,7 +1321,7 @@ PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
 PKG_SOURCE_VERSION="e626a72bc2321cd320e953a0ccf1584cad60f363"
 PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}-${PKG_SOURCE_VERSION}.tar.xz"
 PKG_HASH_VERIFY="full_extract"
-PKG_HASH=""
+PKG_HASH="9ccc54b885313910551c2b17df317f54366bd5f531cd77a1d372257be007ed02"
 
 mkdir -p "${SRC_ROOT}/${PKG_NAME}"
 cd "${SRC_ROOT}/${PKG_NAME}"
@@ -1351,7 +1351,6 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     touch "__package_installed"
 fi
 )
-exit 1
 
 ################################################################################
 # gdb-17.1
