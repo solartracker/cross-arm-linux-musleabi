@@ -879,7 +879,7 @@ echo ""
 echo ""
 add_items_to_install_package "bin/gdb" \
                              "bin/gdbserver" \
-                             "lib/libc.so"
+                             "${TARGET}/lib/libc.so"
 return 0
 }
 
