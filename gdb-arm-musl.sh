@@ -1312,9 +1312,9 @@ fi
 )
 
 ################################################################################
-# xxHash-0.8.3
+# xxhash-0.8.3
 (
-PKG_NAME=xxHash
+PKG_NAME=xxhash
 PKG_VERSION="0.8.3+git"
 PKG_SOURCE_URL="https://github.com/Cyan4973/xxHash.git"
 PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
