@@ -1321,15 +1321,15 @@ PKG_SOURCE_SUBDIR="${PKG_NAME}-${PKG_VERSION}"
 PKG_SOURCE_VERSION="e626a72bc2321cd320e953a0ccf1584cad60f363"
 PKG_SOURCE="${PKG_NAME}-${PKG_VERSION}-${PKG_SOURCE_VERSION}.tar.xz"
 PKG_HASH_VERIFY="full_extract"
-PKG_HASH="ae83002690aba91a210f3efc2dbf00aee5266f9b68f47b1130c95dd6a1a48e4b"
+PKG_HASH=""
 
 mkdir -p "${SRC_ROOT}/${PKG_NAME}"
 cd "${SRC_ROOT}/${PKG_NAME}"
 
 if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     rm -rf "${PKG_SOURCE_SUBDIR}"
-    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "."
-    verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
+    download_archive "${PKG_SOURCE_URL}" "${PKG_SOURCE}" "." "${PKG_SOURCE_VERSION}" "${PKG_SOURCE_SUBDIR}"
+    verify_hash "${PKG_SOURCE}" "${PKG_HASH}" "${PKG_HASH_VERIFY}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
     cd "${PKG_SOURCE_SUBDIR}"
 
