@@ -1440,7 +1440,6 @@ return 0
 
 
 if main; then
-    echo ""
     echo "[*] Script exited cleanly."
     echo ""
 else
