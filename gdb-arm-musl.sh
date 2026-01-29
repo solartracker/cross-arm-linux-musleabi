@@ -1415,6 +1415,7 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
         --with-system-zlib \
         --with-lzma \
         --with-zstd \
+        --with-xxhash \
         --enable-compressed-debug-sections=ld \
         --enable-default-compressed-debug-sections-algorithm=zlib \
         LDFLAGS="-static ${LDFLAGS}" \
