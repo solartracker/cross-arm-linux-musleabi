@@ -1188,7 +1188,7 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
         --enable-default-compressed-debug-sections-algorithm=zlib \
     || handle_configure_error $?
 
-    $MAKE LDFLAGS="-static -all-static ${LDFLAGS}"
+    $MAKE
     make install
 
     restore_shared_libraries
