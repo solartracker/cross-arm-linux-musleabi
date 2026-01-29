@@ -1312,6 +1312,7 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
         --without-guile \
         --with-expat \
         --with-zlib \
+        --with-lzma \
         --with-zstd \
         --enable-compressed-debug-sections=ld \
         --enable-default-compressed-debug-sections-algorithm=zlib \
