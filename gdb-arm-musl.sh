@@ -65,7 +65,7 @@ case "${HOST_CPU}" in
         LDD="${SYSROOT}/lib/libc.so --list"
         ;;
     *)
-        LDD="true"
+        LDD=true
         ;;
 esac
 
@@ -1431,6 +1431,7 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     restore_shared_libraries
 
     # strip and verify statically-linked
+    STRIP=true
     finalize_build "${PREFIX}/bin/gdb" \
                    "${PREFIX}/bin/gdbserver"
 
