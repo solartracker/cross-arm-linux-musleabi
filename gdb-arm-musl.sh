@@ -874,16 +874,12 @@ create_install_package() {
 set +x
 echo ""
 echo ""
-echo "[*] Finished building Transmission ${BUILD_TRANSMISSION_VERSION}"
+echo "[*] Finished building GDB ${BUILD_TRANSMISSION_VERSION}"
 echo ""
 echo ""
-add_items_to_install_package "bin/transmission-cli" \
-                             "bin/transmission-create" \
-                             "bin/transmission-daemon" \
-                             "bin/transmission-edit" \
-                             "bin/transmission-remote" \
-                             "bin/transmission-show" \
-                             "share/transmission"
+add_items_to_install_package "bin/gdb" \
+                             "bin/gdbserver" \
+                             "lib/libc.so"
 return 0
 }
 
@@ -1431,9 +1427,7 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     restore_shared_libraries
 
     # strip and verify statically-linked
-    STRIP=true
-    finalize_build "${PREFIX}/bin/gdb" \
-                   "${PREFIX}/bin/gdbserver"
+    finalize_build "${PREFIX}/bin/gdbserver"
 
     touch "__package_installed"
 fi
