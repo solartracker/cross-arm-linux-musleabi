@@ -861,13 +861,10 @@ add_items_to_install_package()
     done
 
     echo ""
+    echo "[*] Finished creating the install package."
     echo ""
-    echo "[*] Finished."
-    echo ""
-    echo ""
-    echo "Install package is here:"
+    echo "[*] Install package is here:"
     echo "${pkg_files}"
-    echo ""
     echo ""
 
     return 0
@@ -879,9 +876,7 @@ add_items_to_install_package()
 create_install_package() {
 set +x
 echo ""
-echo ""
 echo "[*] Finished building GDB ${BUILD_TRANSMISSION_VERSION}"
-echo ""
 echo ""
 add_items_to_install_package "bin/gdb" \
                              "bin/gdbserver" \
@@ -1446,12 +1441,9 @@ return 0
 
 if main; then
     echo ""
-    echo ""
     echo "[*] Script exited cleanly."
     echo ""
-    echo ""
 else
-    echo ""
     echo ""
 fi
 
