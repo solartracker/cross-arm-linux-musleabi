@@ -862,12 +862,12 @@ add_items_to_install_package()
         chmod 644 "${temp_path}" || return 1
         mv -f "${temp_path}" "${pkg_path}" || return 1
         trap - EXIT INT TERM
+        echo ""
         sign_file "${pkg_path}"
 
         pkg_files="${pkg_files}${pkg_path}\n"
     done
 
-    echo ""
     echo "[*] Finished creating the install package."
     echo ""
     echo "[*] Install package is here:"
