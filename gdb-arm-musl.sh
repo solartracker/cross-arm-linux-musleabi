@@ -111,7 +111,7 @@ mkdir -p "${PACKAGER_ROOT}/lib/"
 cp -p "${SCRIPT_DIR}/files/gdb/gdb-17.1/solartracker/gdb.sh" "${PACKAGER_ROOT}/"
 cp -p "${PREFIX}/bin/gdb" "${PACKAGER_ROOT}/bin/"
 cp -p "${PREFIX}/bin/gdbserver" "${PACKAGER_ROOT}/bin/"
-cp -p "${TARGET}/lib/libc.so" "${PACKAGER_ROOT}/lib/"
+cp -p "${SYSROOT}/lib/libc.so" "${PACKAGER_ROOT}/lib/"
 add_items_to_install_package
 
 return 0
