@@ -1439,7 +1439,9 @@ return 0
 } #END download_and_compile
 
 
-if main; then
+main
+if [ $? -eq 0 ]; then
+    echo ""
     echo "[*] Script exited cleanly."
     echo ""
 else
