@@ -75,6 +75,10 @@ esac
 SRC_ROOT="${CROSSBUILD_DIR}/src/${PKG_ROOT}"
 mkdir -p "${SRC_ROOT}"
 
+PACKAGER_ROOT="${CROSSBUILD_DIR}/packager/${PKG_ROOT}/${PKG_ROOT}-${PKG_ROOT_VERSION}"
+rm -rf "${PACKAGER_ROOT}"
+mkdir -p "${PACKAGER_ROOT}"
+
 MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
 #MAKE="make -j1"                                  # one job at a time
 
@@ -101,9 +105,13 @@ set +x
 echo ""
 echo "[*] Finished building GDB ${PKG_ROOT_VERSION}"
 echo ""
-add_items_to_install_package "bin/gdb" \
-                             "bin/gdbserver" \
-                             "${TARGET}/lib/libc.so"
+
+cp -p "${SCRIPT_DIR}/files/gdb/gdb-17.1/solartracker/gdb.sh" "${PACKAGER_ROOT}/"
+cp -p "${PREFIX}/bin/gdb" "${PACKAGER_ROOT}/bin/"
+cp -p "${PREFIX}/bin/gdbserver" "${PACKAGER_ROOT}/bin/"
+cp -p "${TARGET}/lib/libc.so" "${PACKAGER_ROOT}/lib/"
+add_items_to_install_package
+
 return 0
 } #END create_install_package()
 
@@ -854,25 +862,11 @@ restore_shared_libraries() {
 
 add_items_to_install_package()
 ( # BEGIN sub-shell
-    [ "$#" -gt 0 ] || return 1
     [ -n "$PKG_ROOT" ]            || return 1
     [ -n "$PKG_ROOT_VERSION" ]    || return 1
     [ -n "$PKG_ROOT_RELEASE" ]    || return 1
     [ -n "$PKG_TARGET_CPU" ]      || return 1
     [ -n "$CACHED_DIR" ]          || return 1
-
-    echo "[*] Add items to install package..."
-    local ready=true
-    for f in "$@"; do
-        if [ -e "${PREFIX}/${f}" ]; then
-            echo "Found:   ${f}"
-        else
-            ready=false
-            echo "MISSING: ${f}"
-        fi
-    done
-    echo ""
-    ${ready} || return 1
 
     local pkg_files=""
     for fmt in gz xz; do
@@ -899,7 +893,7 @@ add_items_to_install_package()
         timestamp="@$(stat -c %Y "${PREFIX}/${1}")"
         if ! tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" \
                 --transform "s|^|${PKG_ROOT}-${PKG_ROOT_VERSION}/|" \
-                -C "${PREFIX}" "$@" \
+                -C "${PACKAGER_ROOT}" * \
                 -cv | ${compressor} >"${temp_path}"; then
             return 1
         fi
