@@ -1,0 +1,11 @@
+--- a/src/misc/syslog.c	2024-02-29 21:07:33.000000000 -0500
++++ b/src/misc/syslog.c	2026-01-30 12:31:03.639980095 -0500
+@@ -99,7 +99,7 @@
+ 	if (!(priority & LOG_FACMASK)) priority |= log_facility;
+ 
+ 	now = time(NULL);
+-	gmtime_r(&now, &tm);
++	localtime_r(&now, &tm);
+ 	strftime_l(timebuf, sizeof timebuf, "%b %e %T", &tm, C_LOCALE);
+ 
+ 	pid = (log_opt & LOG_PID) ? getpid() : 0;

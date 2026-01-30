@@ -1529,14 +1529,13 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     verify_hash "${PKG_SOURCE}" "${PKG_HASH}"
     unpack_archive "${PKG_SOURCE}" "${PKG_SOURCE_SUBDIR}"
 
+    apply_patches "${SCRIPT_DIR}/patches/${PKG_NAME}/musl-1.2.5/solartracker" "${PKG_SOURCE_SUBDIR}"
+
     # SECURITY ADVISORY: All releases through 1.2.5 are affected by CVE-2025-26519 and should be patched (1, 2).
-    # https://musl.libc.org/
-    apply_patches "${SCRIPT_DIR}/patches/${PKG_NAME}/musl-1.2.5/solartracker/101-CVE-2025-26519-1.patch" "${PKG_SOURCE_SUBDIR}"
-    apply_patches "${SCRIPT_DIR}/patches/${PKG_NAME}/musl-1.2.5/solartracker/102-CVE-2025-26519-2.patch" "${PKG_SOURCE_SUBDIR}"
+    apply_patches "${SCRIPT_DIR}/patches/${PKG_NAME}/musl-1.2.5/cve" "${PKG_SOURCE_SUBDIR}"
 
     # SECURITY ADVISORY: All releases through 1.2.1 are affected by CVE-2020-28928 and should be patched or upgraded to a later version.
-    # https://musl.libc.org/
-    #apply_patches "${SCRIPT_DIR}/patches/${PKG_NAME}/musl-1.2.1/solartracker/101-CVE-2025-26519-1.patch" "${PKG_SOURCE_SUBDIR}"
+    #apply_patches "${SCRIPT_DIR}/patches/${PKG_NAME}/musl-1.2.1/cve" "${PKG_SOURCE_SUBDIR}"
 
     rm -rf "${PKG_BUILD_SUBDIR}"
     mkdir "${PKG_BUILD_SUBDIR}"
