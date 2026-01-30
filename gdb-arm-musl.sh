@@ -91,7 +91,7 @@ download_and_compile
 create_install_package
 
 return 0
-}
+} #END main()
 
 ################################################################################
 # Create install package
@@ -105,7 +105,7 @@ add_items_to_install_package "bin/gdb" \
                              "bin/gdbserver" \
                              "${TARGET}/lib/libc.so"
 return 0
-}
+} #END create_install_package()
 
 ################################################################################
 # CMake toolchain file
@@ -150,7 +150,7 @@ CMAKE_CPP_FLAGS="${CPPFLAGS}"
 } >"${SRC_ROOT}/arm-musl.toolchain.cmake"
 
 return 0
-} #END create_cmake_toolchain_file
+} #END create_cmake_toolchain_file()
 
 ################################################################################
 # Helpers
@@ -948,7 +948,7 @@ add_items_to_install_package()
 # ARM Linux musl Cross-Compiler v0.2.0
 #
 install_build_environment() {
-(
+( #BEGIN sub-shell
 PKG_NAME=cross-arm-linux-musleabi
 get_latest() { get_latest_package "${PKG_NAME}-${HOST_CPU}-" "??????????????" ".tar.xz"; }
 #PKG_VERSION="$(get_latest)" # this line will fail if you did not build a toolchain yourself
@@ -1014,8 +1014,8 @@ if [ ! -x "${CROSSBUILD_DIR}/${TARGET}/lib/libc.so" ]; then
     echo ""
     exit 1
 fi
-)
-}
+) #END sub-shell
+} #END install_build_environment()
 
 download_and_compile() {
 ################################################################################
@@ -1495,7 +1495,7 @@ fi
 )
 
 return 0
-} #END download_and_compile
+} #END download_and_compile()
 
 
 main
