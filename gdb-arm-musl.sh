@@ -55,6 +55,9 @@ export STRIP=${CROSS_PREFIX}strip
 export READELF=${CROSS_PREFIX}readelf
 
 CFLAGS_COMMON="-O3 -march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux -fomit-frame-pointer -ffunction-sections -fdata-sections -pipe -Wall -fPIC"
+
+#CFLAGS_COMMON="-g3 -ggdb3 -O0 -fno-omit-frame-pointer -fno-inline -march=armv7-a -mtune=cortex-a9 -marm -mfloat-abi=soft -mabi=aapcs-linux -ffunction-sections -fdata-sections -pipe -Wall -fPIC"
+
 export CFLAGS="${CFLAGS_COMMON} -std=gnu99"
 export CXXFLAGS="${CFLAGS_COMMON} -std=gnu++17"
 export LDFLAGS="-L${PREFIX}/lib -Wl,--gc-sections"
@@ -80,11 +83,74 @@ export PKG_CONFIG_LIBDIR="${PREFIX}/lib/pkgconfig"
 unset PKG_CONFIG_PATH
 
 install_build_environment
+
+#create_cmake_toolchain_file
+
 download_and_compile
+
 create_install_package
 
 return 0
 }
+
+################################################################################
+# Create install package
+#
+create_install_package() {
+set +x
+echo ""
+echo "[*] Finished building GDB ${PKG_ROOT_VERSION}"
+echo ""
+add_items_to_install_package "bin/gdb" \
+                             "bin/gdbserver" \
+                             "${TARGET}/lib/libc.so"
+return 0
+}
+
+################################################################################
+# CMake toolchain file
+#
+create_cmake_toolchain_file() {
+# CMAKE options
+CMAKE_BUILD_TYPE="RelWithDebInfo"
+CMAKE_VERBOSE_MAKEFILE="YES"
+CMAKE_C_FLAGS="${CFLAGS}"
+CMAKE_CXX_FLAGS="${CXXFLAGS}"
+CMAKE_LD_FLAGS="${LDFLAGS}"
+CMAKE_CPP_FLAGS="${CPPFLAGS}"
+
+{
+    printf '%s\n' "# toolchain.cmake"
+    printf '%s\n' "set(CMAKE_SYSTEM_NAME Linux)"
+    printf '%s\n' "set(CMAKE_SYSTEM_PROCESSOR arm)"
+    printf '%s\n' ""
+    printf '%s\n' "# Cross-compiler"
+    printf '%s\n' "set(CMAKE_C_COMPILER arm-linux-musleabi-gcc)"
+    printf '%s\n' "set(CMAKE_CXX_COMPILER arm-linux-musleabi-g++)"
+    printf '%s\n' "set(CMAKE_AR arm-linux-musleabi-ar)"
+    printf '%s\n' "set(CMAKE_RANLIB arm-linux-musleabi-ranlib)"
+    printf '%s\n' "set(CMAKE_STRIP arm-linux-musleabi-strip)"
+    printf '%s\n' ""
+#    printf '%s\n' "# Optional: sysroot"
+#    printf '%s\n' "set(CMAKE_SYSROOT \"${SYSROOT}\")"
+    printf '%s\n' ""
+#    printf '%s\n' "# Avoid picking host libraries"
+#    printf '%s\n' "set(CMAKE_FIND_ROOT_PATH \"${PREFIX}\")"
+    printf '%s\n' ""
+#    printf '%s\n' "# Tell CMake to search only in sysroot"
+#    printf '%s\n' "set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)"
+#    printf '%s\n' "set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)"
+#    printf '%s\n' "set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)"
+    printf '%s\n' ""
+#    printf '%s\n' "set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY) # critical for skipping warning probes"
+#    printf '%s\n' ""
+    printf '%s\n' "set(CMAKE_C_STANDARD 11)"
+    printf '%s\n' "set(CMAKE_CXX_STANDARD 17)"
+    printf '%s\n' ""
+} >"${PREFIX}/arm-musl.toolchain.cmake"
+
+return 0
+} #END create_cmake_toolchain_file
 
 ################################################################################
 # Helpers
@@ -876,20 +942,6 @@ add_items_to_install_package()
 
     return 0
 ) # END sub-shell
-
-################################################################################
-# Create install package
-#
-create_install_package() {
-set +x
-echo ""
-echo "[*] Finished building GDB ${PKG_ROOT_VERSION}"
-echo ""
-add_items_to_install_package "bin/gdb" \
-                             "bin/gdbserver" \
-                             "${TARGET}/lib/libc.so"
-return 0
-}
 
 ################################################################################
 # Install the build environment
