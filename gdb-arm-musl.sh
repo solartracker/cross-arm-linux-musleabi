@@ -106,6 +106,8 @@ echo ""
 echo "[*] Finished building GDB ${PKG_ROOT_VERSION}"
 echo ""
 
+mkdir -p "${PACKAGER_ROOT}/bin/"
+mkdir -p "${PACKAGER_ROOT}/lib/"
 cp -p "${SCRIPT_DIR}/files/gdb/gdb-17.1/solartracker/gdb.sh" "${PACKAGER_ROOT}/"
 cp -p "${PREFIX}/bin/gdb" "${PACKAGER_ROOT}/bin/"
 cp -p "${PREFIX}/bin/gdbserver" "${PACKAGER_ROOT}/bin/"
