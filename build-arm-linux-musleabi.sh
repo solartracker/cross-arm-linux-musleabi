@@ -223,9 +223,9 @@ sign_file()
 
     if [ -z "${option}" ]; then
         target_file_hash="$(sha256sum "${target_path}" | awk '{print $1}')"
-    elif [ "${option}" == "tar_extract" ]; then
-        target_file_hash="$(tar -xJOf "${target_path}" | sha256sum | awk '{print $1}')"
-    elif [ "${option}" == "xz_extract" ]; then
+    elif [ "${option}" = "full_extract" ]; then
+        target_file_hash="$(hash_archive "${target_path}")"
+    elif [ "${option}" = "xz_extract" ]; then
         target_file_hash="$(xz -dc "${target_path}" | sha256sum | awk '{print $1}')"
     else
         return 1
@@ -254,6 +254,53 @@ sign_file()
     return 0
 ) # END sub-shell
 
+hash_dir()
+( # BEGIN sub-shell
+    [ -n "$1" ] || return 1
+
+    dir_path="$1"
+
+    cleanup() { :; }
+    trap 'cleanup; exit 130' INT
+    trap 'cleanup; exit 143' TERM
+    trap 'cleanup' EXIT
+    cd "${dir_path}" || return 1
+    (
+        find ./ -type f | sort | while IFS= read -r f; do
+            set +x
+            echo "${f}"        # include the path
+            cat "${f}"         # include the contents
+        done
+    ) | sha256sum | awk '{print $1}'
+
+    return 0
+) # END sub-shell
+
+hash_archive()
+( # BEGIN sub-shell
+    [ -n "$1" ] || return 1
+
+    source_path="$1"
+    target_dir="$(dirname "${source_path}")"
+    target_file="$(basename "${source_path}")"
+
+    cd "${target_dir}" || return 1
+
+    cleanup() { rm -rf "${dir_tmp}"; }
+    trap 'cleanup; exit 130' INT
+    trap 'cleanup; exit 143' TERM
+    trap 'cleanup' EXIT
+    dir_tmp=$(mktemp -d "${target_file}.XXXXXX")
+    mkdir -p "${dir_tmp}"
+    if ! extract_package "${source_path}" "${dir_tmp}" >/dev/null 2>&1; then
+        return 1
+    else
+        hash_dir "${dir_tmp}"
+    fi
+
+    return 0
+) # END sub-shell
+
 # Checksum verification for downloaded file
 verify_hash() {
     [ -n "$1" ] || return 1
@@ -271,14 +318,12 @@ verify_hash() {
     fi
 
     if [ -z "${option}" ]; then
-        # hash the compressed binary file. this method is best when downloading
-        # compressed binary files.
+        # hash the compressed binary archive itself
         actual="$(sha256sum "${file_path}" | awk '{print $1}')"
-    elif [ "${option}" == "tar_extract" ]; then
-        # hash the data, file names, directory names. this method is best when
-        # archiving Github repos.
-        actual="$(tar -xJOf "${file_path}" | sha256sum | awk '{print $1}')"
-    elif [ "${option}" == "xz_extract" ]; then
+    elif [ "${option}" = "full_extract" ]; then
+        # hash the data inside the compressed binary archive
+        actual="$(hash_archive "${file_path}")"
+    elif [ "${option}" = "xz_extract" ]; then
         # hash the data, file names, directory names, timestamps, permissions, and
         # tar internal structures. this method is not as "future-proof" for archiving
         # Github repos because it is possible that the tar internal structures
@@ -519,7 +564,7 @@ clone_github()
             mv -f "${temp_path}" "${cached_path}" || return 1
             rm -rf "${temp_dir}" || return 1
             trap - EXIT INT TERM
-            sign_file "${cached_path}"
+            sign_file "${cached_path}" "full_extract"
         else
             cleanup() { rm -f "${cached_path}"; }
             trap 'cleanup; exit 130' INT
@@ -863,6 +908,19 @@ add_items_to_install_package()
     [ -n "$PKG_TARGET_CPU" ]      || return 1
     [ -n "$CACHED_DIR" ]          || return 1
 
+    echo "[*] Add items to install package..."
+    local ready=true
+    for f in "$@"; do
+        if [ -e "${PREFIX}/${f}" ]; then
+            echo "Found:   ${f}"
+        else
+            ready=false
+            echo "MISSING: ${f}"
+        fi
+    done
+    echo ""
+    ${ready} || return 1
+
     local pkg_files=""
     for fmt in gz xz; do
         local pkg_file="${PKG_ROOT}_${PKG_ROOT_VERSION}-${PKG_ROOT_RELEASE}_${PKG_TARGET_CPU}.tar.${fmt}"
@@ -871,12 +929,12 @@ add_items_to_install_package()
         local timestamp=""
         local compressor=""
 
-        case "$fmt" in
+        case "${fmt}" in
             gz) compressor="gzip -9 -n" ;;
             xz) compressor="xz -zc -7e -T0" ;;
         esac
 
-        echo "[*] Creating the install package..."
+        echo "[*] Creating install package (.${fmt})..."
         mkdir -p "${CACHED_DIR}"
         rm -f "${pkg_path}"
         rm -f "${pkg_path}.sha256"
@@ -896,19 +954,16 @@ add_items_to_install_package()
         chmod 644 "${temp_path}" || return 1
         mv -f "${temp_path}" "${pkg_path}" || return 1
         trap - EXIT INT TERM
+        echo ""
         sign_file "${pkg_path}"
 
         pkg_files="${pkg_files}${pkg_path}\n"
     done
 
+    echo "[*] Finished creating the install package."
     echo ""
-    echo ""
-    echo "[*] Finished."
-    echo ""
-    echo ""
-    echo "Install package is here:"
+    echo "[*] Install package is here:"
     echo "${pkg_files}"
-    echo ""
     echo ""
 
     return 0
