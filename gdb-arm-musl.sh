@@ -147,7 +147,7 @@ CMAKE_CPP_FLAGS="${CPPFLAGS}"
     printf '%s\n' "set(CMAKE_C_STANDARD 11)"
     printf '%s\n' "set(CMAKE_CXX_STANDARD 17)"
     printf '%s\n' ""
-} >"${PREFIX}/arm-musl.toolchain.cmake"
+} >"${SRC_ROOT}/arm-musl.toolchain.cmake"
 
 return 0
 } #END create_cmake_toolchain_file

@@ -70,17 +70,19 @@ STAGE="${PREFIX}/stage"
 mkdir -p "${STAGE}"
 
 check_dependencies
+
+#create_cmake_toolchain_file
+
 download_and_compile
+
 archive_and_configuration
 
 return 0
 } #END main()
 
-
 ################################################################################
 # Host dependencies
 #
-
 check_dependencies() {
 set +x
 install_dependencies
@@ -177,6 +179,51 @@ install_dependencies() {
 
     return 0
 }
+
+################################################################################
+# CMake toolchain file
+#
+create_cmake_toolchain_file() {
+# CMAKE options
+CMAKE_BUILD_TYPE="RelWithDebInfo"
+CMAKE_VERBOSE_MAKEFILE="YES"
+CMAKE_C_FLAGS="${CFLAGS}"
+CMAKE_CXX_FLAGS="${CXXFLAGS}"
+CMAKE_LD_FLAGS="${LDFLAGS}"
+CMAKE_CPP_FLAGS="${CPPFLAGS}"
+
+{
+    printf '%s\n' "# toolchain.cmake"
+    printf '%s\n' "set(CMAKE_SYSTEM_NAME Linux)"
+    printf '%s\n' "set(CMAKE_SYSTEM_PROCESSOR arm)"
+    printf '%s\n' ""
+    printf '%s\n' "# Cross-compiler"
+    printf '%s\n' "set(CMAKE_C_COMPILER arm-linux-musleabi-gcc)"
+    printf '%s\n' "set(CMAKE_CXX_COMPILER arm-linux-musleabi-g++)"
+    printf '%s\n' "set(CMAKE_AR arm-linux-musleabi-ar)"
+    printf '%s\n' "set(CMAKE_RANLIB arm-linux-musleabi-ranlib)"
+    printf '%s\n' "set(CMAKE_STRIP arm-linux-musleabi-strip)"
+    printf '%s\n' ""
+#    printf '%s\n' "# Optional: sysroot"
+#    printf '%s\n' "set(CMAKE_SYSROOT \"${SYSROOT}\")"
+    printf '%s\n' ""
+#    printf '%s\n' "# Avoid picking host libraries"
+#    printf '%s\n' "set(CMAKE_FIND_ROOT_PATH \"${PREFIX}\")"
+    printf '%s\n' ""
+#    printf '%s\n' "# Tell CMake to search only in sysroot"
+#    printf '%s\n' "set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)"
+#    printf '%s\n' "set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)"
+#    printf '%s\n' "set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)"
+    printf '%s\n' ""
+#    printf '%s\n' "set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY) # critical for skipping warning probes"
+#    printf '%s\n' ""
+    printf '%s\n' "set(CMAKE_C_STANDARD 11)"
+    printf '%s\n' "set(CMAKE_CXX_STANDARD 17)"
+    printf '%s\n' ""
+} >"${SRC_ROOT}/arm-musl.toolchain.cmake"
+
+return 0
+} #END create_cmake_toolchain_file
 
 ################################################################################
 # Helpers
@@ -969,7 +1016,6 @@ add_items_to_install_package()
     return 0
 ) # END sub-shell
 
-
 ################################################################################
 # Archive build directory
 #
@@ -1701,5 +1747,7 @@ return 0
 
 
 main
+echo ""
 echo "Script exited cleanly."
+echo ""
 
