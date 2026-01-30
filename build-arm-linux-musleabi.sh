@@ -1656,6 +1656,11 @@ fi
 #
 on_build_finished
 
+set +x
+echo ""
+echo "[*] Finished compiling."
+echo ""
+
 return 0
 } #END download_and_compile()
 
@@ -1664,14 +1669,8 @@ archive_and_configuration() {
 ################################################################################
 # Archive the built toolchain
 #
-set +x
-echo ""
-echo ""
-echo "[*] Finished compiling."
-echo ""
 echo ""
 echo "[*] Now archiving the built toolchain (this may take a while)..."
-echo ""
 echo ""
 set -x
 archive_build_directory "${SCRIPT_DIR}" "${CROSSBUILD_DIR}"
