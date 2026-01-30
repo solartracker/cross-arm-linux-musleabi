@@ -842,7 +842,7 @@ add_items_to_install_package()
             xz) compressor="xz -zc -7e -T0" ;;
         esac
 
-        echo "[*] Creating the install package (${fmt})..."
+        echo "[*] Creating install package (.${fmt})..."
         mkdir -p "${CACHED_DIR}"
         rm -f "${pkg_path}"
         rm -f "${pkg_path}.sha256"
