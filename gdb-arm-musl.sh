@@ -820,7 +820,10 @@ add_items_to_install_package()
     for f in "$@"; do
         [ -e "${PREFIX}/${f}" ] || { ready=false; echo "missing: ${f}" >&2; }
     done
-    ${ready} || return 1
+    if ! ${ready}; then
+        echo ""
+        return 1
+    fi
 
     local pkg_files=""
     for fmt in gz xz; do
@@ -1440,11 +1443,7 @@ return 0
 
 
 main
-if [ $? -eq 0 ]; then
-    echo ""
-    echo "[*] Script exited cleanly."
-    echo ""
-else
-    echo ""
-fi
+echo ""
+echo "[*] Script exited cleanly."
+echo ""
 
