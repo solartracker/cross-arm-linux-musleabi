@@ -101,10 +101,6 @@ return 0
 # Create install package
 #
 create_install_package() {
-set +x
-echo ""
-echo "[*] Finished building GDB ${PKG_ROOT_VERSION}"
-echo ""
 
 mkdir -p "${PACKAGER_ROOT}/bin"
 mkdir -p "${PACKAGER_ROOT}/lib"
@@ -1469,6 +1465,11 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     touch "__package_installed"
 fi
 )
+
+set +x
+echo ""
+echo "[*] Finished compiling ${PKG_ROOT} ${PKG_ROOT_VERSION}"
+echo ""
 
 return 0
 } #END download_and_compile()
