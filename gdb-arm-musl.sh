@@ -816,14 +816,18 @@ add_items_to_install_package()
     [ -n "$PKG_TARGET_CPU" ]      || return 1
     [ -n "$CACHED_DIR" ]          || return 1
 
+    echo "[*] Add items to install package..."
     local ready=true
     for f in "$@"; do
-        [ -e "${PREFIX}/${f}" ] || { ready=false; echo "missing: ${f}" >&2; }
+        if [ -e "${PREFIX}/${f}" ]; then
+            echo "Found:   ${f}"
+        else
+            ready=false
+            echo "MISSING: ${f}"
+        fi
     done
-    if ! ${ready}; then
-        echo ""
-        return 1
-    fi
+    echo ""
+    ${ready} || return 1
 
     local pkg_files=""
     for fmt in gz xz; do
