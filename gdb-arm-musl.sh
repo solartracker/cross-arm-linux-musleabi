@@ -883,7 +883,7 @@ add_items_to_install_package()
 create_install_package() {
 set +x
 echo ""
-echo "[*] Finished building GDB ${BUILD_TRANSMISSION_VERSION}"
+echo "[*] Finished building GDB ${PKG_ROOT_VERSION}"
 echo ""
 add_items_to_install_package "bin/gdb" \
                              "bin/gdbserver" \
