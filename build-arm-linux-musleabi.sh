@@ -4,6 +4,12 @@
 #
 # Builds a cross-compiler for ARMv7 soft-float musl libc
 #
+# NOTE: Compiling GCC on a Raspberry Pi can generate significant heat, often
+# exceeding 80°C in stock cases. Upgrading to an aluminum case with copper shims
+# and good thermal paste provides effective passive cooling that dramatically
+# improves heat dissipation, keeping CPU temperatures below 55°C and preventing
+# thermal throttling during long builds.
+#
 # Copyright (C) 2025 Richard Elwell
 #
 # This program is free software: you can redistribute it and/or modify
