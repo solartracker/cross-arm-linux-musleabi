@@ -10,6 +10,15 @@
 # improves heat dissipation, keeping CPU temperatures below 55°C and preventing
 # thermal throttling during long builds.
 #
+# On a Raspberry Pi 3 Model B, a clean build took approximately 5 hours and
+# required:
+#
+# - SSD-based storage
+# - 10 GB swap file (just in case)
+# - Adequate cooling
+# 
+# Build times on modern x86_64 systems are significantly shorter.
+#
 # Copyright (C) 2025 Richard Elwell
 #
 # This program is free software: you can redistribute it and/or modify
