@@ -11,8 +11,8 @@ Build a reproducible ARMv7 musl-based cross-compiler entirely from source.
 - Target: `arm-linux-musleabi` (ARMv7 soft-float)
 - libc: musl
 - Languages: C, C++
-- Raspberry Pi 3B build time: ~4 hours
-- Intel Xeon E-2276M build time: <20 minutes
+- Raspberry Pi 3B build time: ~5 hours
+- Intel Xeon E-2276M build time: <25 minutes
 
 ## Target Overview
 
@@ -46,7 +46,7 @@ sudo apt install     build-essential     binutils     bison     flex     texinfo
 
 ## Build Time Expectations
 
-On a **Raspberry Pi 3 Model B**, a clean build took approximately **4 hours** and required:
+On a **Raspberry Pi 3 Model B**, a clean build took approximately **5 hours** and required:
 
 - SSD-based storage
 - 10 GB swap file (just in case)
