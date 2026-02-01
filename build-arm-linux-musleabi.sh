@@ -32,7 +32,7 @@ set -x
 
 main() {
 export TARGET=arm-linux-musleabi
-RELEASE_VERSION=0.2.0
+RELEASE_VERSION=0.2.1
 HOST_CPU="$(uname -m)"
 
 CROSSBUILD_DIR="${SCRIPT_DIR}-build"
