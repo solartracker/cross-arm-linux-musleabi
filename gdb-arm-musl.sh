@@ -73,11 +73,7 @@ case "${HOST_CPU}" in
 esac
 
 SRC_ROOT="${CROSSBUILD_DIR}/src/${PKG_ROOT}"
-mkdir -p "${SRC_ROOT}"
-
 PACKAGER_ROOT="${CROSSBUILD_DIR}/packager/${PKG_ROOT}/${PKG_ROOT}-${PKG_ROOT_VERSION}"
-rm -rf "${PACKAGER_ROOT}"
-mkdir -p "${PACKAGER_ROOT}"
 
 MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
 #MAKE="make -j1"                                  # one job at a time
@@ -102,6 +98,7 @@ return 0
 #
 create_install_package() {
 
+rm -rf "${PACKAGER_ROOT}"
 mkdir -p "${PACKAGER_ROOT}/bin"
 mkdir -p "${PACKAGER_ROOT}/lib"
 cp -p "${SCRIPT_DIR}/files/gdb/gdb-17.1/solartracker/gdb.sh" "${PACKAGER_ROOT}/"
@@ -992,6 +989,8 @@ fi
 } #END install_build_environment()
 
 download_and_compile() {
+mkdir -p "${SRC_ROOT}"
+
 ################################################################################
 # zlib-1.3.1
 (
