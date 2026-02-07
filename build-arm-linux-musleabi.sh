@@ -51,7 +51,6 @@ RELEASE_VERSION=0.2.1
 HOST_CPU="$(uname -m)"
 
 CROSSBUILD_DIR="${SCRIPT_DIR}-build"
-mkdir -p "${CROSSBUILD_DIR}"
 
 BUILD_START_PATH="${CROSSBUILD_DIR}/.build_start"
 VERSION_PATH="${CROSSBUILD_DIR}/VERSION"
@@ -77,14 +76,12 @@ esac
 
 SRC_DIR_NAME="src"
 SRC_ROOT="${CROSSBUILD_DIR}/${SRC_DIR_NAME}/${TARGET}"
-mkdir -p "$SRC_ROOT"
 
 MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
 #MAKE="make -j1"                                  # one job at a time
 
 STAGE_DIR_NAME="stage"
 STAGE="${PREFIX}/${STAGE_DIR_NAME}"
-mkdir -p "${STAGE}"
 
 check_dependencies
 
@@ -201,6 +198,8 @@ install_dependencies() {
 # CMake toolchain file
 #
 create_cmake_toolchain_file() {
+mkdir -p "${SRC_ROOT}"
+
 # CMAKE options
 CMAKE_BUILD_TYPE="RelWithDebInfo"
 CMAKE_VERBOSE_MAKEFILE="YES"
@@ -1181,6 +1180,9 @@ archive_build_directory()
 
 
 download_and_compile() {
+mkdir -p "${SRC_ROOT}"
+mkdir -p "${CROSSBUILD_DIR}"
+mkdir -p "${STAGE}"
 set +x
 echo ""
 echo ""
