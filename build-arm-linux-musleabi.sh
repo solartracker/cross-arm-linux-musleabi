@@ -1448,8 +1448,8 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
     finalize_build "${PREFIX}/bin/zstd"
 
     # install the program
-    mkdir -p "${PREFIX_TOOLCHAIN}/bin/"
-    cp -p "${PREFIX}/bin/zstd" "${PREFIX_TOOLCHAIN}/bin/"
+    #mkdir -p "${PREFIX_TOOLCHAIN}/bin/"
+    #cp -p "${PREFIX}/bin/zstd" "${PREFIX_TOOLCHAIN}/bin/"
 
     touch __package_installed
 fi
