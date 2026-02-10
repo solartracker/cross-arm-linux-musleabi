@@ -72,17 +72,14 @@ case "${HOST_CPU}" in
         ;;
 esac
 
-SRC_DIR_NAME="src"
-SRC_ROOT="${CROSSBUILD_DIR}/${SRC_DIR_NAME}/${TARGET}"
-
-MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
-#MAKE="make -j1"                                  # one job at a time
+SRC_ROOT="${CROSSBUILD_DIR}/src/${TARGET}"
+STAGE="${CROSSBUILD_DIR}/stage/${TARGET}"
 
 BUILD_START_PATH="${CROSSBUILD_DIR}/.build_start"
 VERSION_PATH="${CROSSBUILD_DIR}/VERSION"
 
-STAGE_DIR_NAME="stage"
-STAGE="${PREFIX}/${STAGE_DIR_NAME}"
+MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
+#MAKE="make -j1"                                  # one job at a time
 
 check_dependencies
 
@@ -1226,8 +1223,9 @@ archive_build_directory()
     trap 'cleanup' EXIT
     temp_path=$(mktemp "${cached_path}.XXXXXX")
     if ! tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" \
-            --exclude="${build_subdir}/${SRC_DIR_NAME}" \
-            --exclude="${build_subdir}/${STAGE_DIR_NAME}" \
+            --exclude="${build_subdir}/src" \
+            --exclude="${build_subdir}/stage" \
+            --exclude="${build_subdir}/packager" \
             --transform "s|^${build_subdir}|${build_subdir}-${host_cpu}+git-${repo_version}${repo_modified}|" \
             -C "${PARENT_DIR}" "${build_subdir}" \
             -cv | xz -zc -7e -T0 >"${temp_path}"; then

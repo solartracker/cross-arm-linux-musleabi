@@ -74,8 +74,8 @@ case "${HOST_CPU}" in
         ;;
 esac
 
-SRC_ROOT="${TARGET_DIR}/src/${PKG_ROOT}"
-PACKAGER_ROOT="${TARGET_DIR}/packager/${PKG_ROOT}/${PKG_ROOT}-${PKG_ROOT_VERSION}"
+SRC_ROOT="${CROSSBUILD_DIR}/src/${PKG_ROOT}"
+PACKAGER_ROOT="${CROSSBUILD_DIR}/packager/${PKG_ROOT}/${PKG_ROOT}-${PKG_ROOT_VERSION}"
 
 MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
 #MAKE="make -j1"                                  # one job at a time
