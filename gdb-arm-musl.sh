@@ -34,7 +34,7 @@ set -x
 main() {
 PKG_ROOT=gdb
 PKG_ROOT_VERSION="17.1"
-PKG_ROOT_RELEASE=1
+PKG_ROOT_RELEASE=2
 PKG_TARGET_CPU=armv7
 PKG_TARGET_VARIANT=
 
@@ -1066,9 +1066,9 @@ if [ ! -x "${CROSSBUILD_DIR}/bin/${TARGET}-gcc" ]; then
     echo ""
     exit 1
 fi
-if [ ! -x "${SYSROOT}/lib/libc.so" ]; then
+if [ ! -x "${PREFIX}/lib/libc.so" ]; then
     echo "ERROR: Toolchain installation appears incomplete."
-    echo "Missing libc.so in ${SYSROOT}/lib"
+    echo "Missing libc.so in ${PREFIX}/lib"
     echo ""
     exit 1
 fi
