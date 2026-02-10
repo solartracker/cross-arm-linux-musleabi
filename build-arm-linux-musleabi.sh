@@ -47,7 +47,7 @@ set -x
 
 main() {
 export TARGET=arm-linux-musleabi
-RELEASE_VERSION=0.2.1
+RELEASE_VERSION=0.2.2
 HOST_CPU="$(uname -m)"
 
 CROSSBUILD_DIR="${SCRIPT_DIR}-build"
@@ -242,7 +242,6 @@ CMAKE_CPP_FLAGS="${CPPFLAGS}"
 return 0
 } #END create_cmake_toolchain_file
 
-
 ################################################################################
 # Helpers
 
@@ -275,7 +274,7 @@ sign_file()
 
     local target_path="$1"
     local option="$2"
-    local sign_path="$(readlink -f "${target_path}").sum"
+    local sum_path="$(readlink -f "${target_path}").sum"
     local target_file="$(basename -- "${target_path}")"
     local target_file_hash=""
     local temp_path=""
@@ -302,7 +301,7 @@ sign_file()
     trap 'cleanup; exit 130' INT
     trap 'cleanup; exit 143' TERM
     trap 'cleanup' EXIT
-    temp_path=$(mktemp "${sign_path}.XXXXXX")
+    temp_path=$(mktemp "${sum_path}.XXXXXX")
     {
         #printf '%s released %s\n' "${target_file}" "${now_localtime}"
         #printf '\n'
@@ -312,8 +311,7 @@ sign_file()
     } >"${temp_path}" || return 1
     chmod --reference="${target_path}" "${temp_path}" || return 1
     touch -r "${target_path}" "${temp_path}" || return 1
-    mv -f "${temp_path}" "${sign_path}" || return 1
-    # TODO: implement signing
+    mv -f "${temp_path}" "${sum_path}" || return 1
     trap - EXIT INT TERM
 
     return 0
@@ -370,66 +368,65 @@ hash_archive()
 verify_hash() {
     [ -n "$1" ] || return 1
 
-    local file_path="$1"
+    local source_path="$1"
     local expected="$2"
     local option="$3"
     local actual=""
-    local sign_path="$(readlink -f "${file_path}").sum"
+    local sum_path="$(readlink -f "${source_path}").sum"
     local line=""
 
-    if [ ! -f "${file_path}" ]; then
-        echo "ERROR: File not found: ${file_path}"
+    if [ ! -f "${source_path}" ]; then
+        echo "ERROR: File not found: ${source_path}"
         return 1
     fi
 
     if [ -z "${option}" ]; then
         # hash the compressed binary archive itself
-        actual="$(sha256sum "${file_path}" | awk '{print $1}')"
+        actual="$(sha256sum "${source_path}" | awk '{print $1}')"
     elif [ "${option}" = "full_extract" ]; then
         # hash the data inside the compressed binary archive
-        actual="$(hash_archive "${file_path}")"
+        actual="$(hash_archive "${source_path}")"
     elif [ "${option}" = "xz_extract" ]; then
         # hash the data, file names, directory names, timestamps, permissions, and
         # tar internal structures. this method is not as "future-proof" for archiving
         # Github repos because it is possible that the tar internal structures
         # could change over time as the tar implementations evolve.
-        actual="$(xz -dc "${file_path}" | sha256sum | awk '{print $1}')"
+        actual="$(xz -dc "${source_path}" | sha256sum | awk '{print $1}')"
     else
         return 1
     fi
 
     if [ -z "${expected}" ]; then
-        if [ ! -f "${sign_path}" ]; then
-            echo "ERROR: Signature file not found: ${sign_path}"
+        if [ ! -f "${sum_path}" ]; then
+            echo "ERROR: Signature file not found: ${sum_path}"
             return 1
         else
-            # TODO: implement signature verify
-            IFS= read -r line <"${sign_path}" || return 1
+            IFS= read -r line <"${sum_path}" || return 1
             expected=${line%%[[:space:]]*}
             if [ -z "${expected}" ]; then
-                echo "ERROR: Bad signature file: ${sign_path}"
+                echo "ERROR: Bad signature file: ${sum_path}"
                 return 1
             fi
         fi
     fi
 
     if [ "${actual}" != "${expected}" ]; then
-        echo "ERROR: SHA256 mismatch for ${file_path}"
+        echo "ERROR: SHA256 mismatch for ${source_path}"
         echo "Expected: ${expected}"
         echo "Actual:   ${actual}"
         return 1
     fi
 
-    echo "SHA256 OK: ${file_path}"
+    echo "SHA256 OK: ${source_path}"
     return 0
 }
 
 # the signature file is just a checksum hash
 signature_file_exists() {
     [ -n "$1" ] || return 1
-    local file_path="$1"
-    local sign_path="$(readlink -f "${file_path}").sum"
-    if [ -f "${sign_path}" ]; then
+    local source_path="$1"
+    local sum_path="$(readlink -f "${source_path}").sum"
+    if [ -f "${sum_path}" ]; then
         return 0
     else
         return 1
@@ -775,6 +772,7 @@ unpack_archive()
 
     local source_path="$1"
     local target_dir="$2"
+    local top_dir="${target_dir%%/*}"
     local dir_tmp=""
 
     if [ ! -d "${target_dir}" ]; then
@@ -782,11 +780,74 @@ unpack_archive()
         trap 'cleanup; exit 130' INT
         trap 'cleanup; exit 143' TERM
         trap 'cleanup' EXIT
-        dir_tmp=$(mktemp -d "${target_dir}.XXXXXX")
+        dir_tmp=$(mktemp -d "${top_dir}.XXXXXX")
         mkdir -p "${dir_tmp}"
         if ! extract_package "${source_path}" "${dir_tmp}"; then
             return 1
         else
+            # try to rename single sub-directory
+            if ! mv -f "${dir_tmp}"/* "${target_dir}"/; then
+                # otherwise, move multiple files and sub-directories
+                mkdir -p "${target_dir}" || return 1
+                mv -f "${dir_tmp}"/* "${target_dir}"/ || return 1
+            fi
+        fi
+        rm -rf "${dir_tmp}" || return 1
+        trap - EXIT INT TERM
+    fi
+
+    return 0
+) # END sub-shell
+
+unpack_and_verify()
+( # BEGIN sub-shell
+    [ -n "$1" ] || return 1
+    [ -n "$2" ] || return 1
+
+    local source_path="$1"
+    local target_dir="$2"
+    local expected="$3"
+    local actual=""
+    local sum_path="$(readlink -f "${source_path}").sum"
+    local line=""
+    local top_dir="${target_dir%%/*}"
+    local dir_tmp=""
+
+    if [ ! -d "${target_dir}" ]; then
+        cleanup() { rm -rf "${dir_tmp}" "${target_dir}"; }
+        trap 'cleanup; exit 130' INT
+        trap 'cleanup; exit 143' TERM
+        trap 'cleanup' EXIT
+        dir_tmp=$(mktemp -d "${top_dir}.XXXXXX")
+        mkdir -p "${dir_tmp}"
+        if ! extract_package "${source_path}" "${dir_tmp}"; then
+            return 1
+        else
+            actual="$(hash_dir "${dir_tmp}")"
+
+            if [ -z "${expected}" ]; then
+                if [ ! -f "${sum_path}" ]; then
+                    echo "ERROR: Signature file not found: ${sum_path}"
+                    return 1
+                else
+                    IFS= read -r line <"${sum_path}" || return 1
+                    expected=${line%%[[:space:]]*}
+                    if [ -z "${expected}" ]; then
+                        echo "ERROR: Bad signature file: ${sum_path}"
+                        return 1
+                    fi
+                fi
+            fi
+
+            if [ "${actual}" != "${expected}" ]; then
+                echo "ERROR: SHA256 mismatch for ${source_path}"
+                echo "Expected: ${expected}"
+                echo "Actual:   ${actual}"
+                return 1
+            fi
+
+            echo "SHA256 OK: ${source_path}"
+
             # try to rename single sub-directory
             if ! mv -f "${dir_tmp}"/* "${target_dir}"/; then
                 # otherwise, move multiple files and sub-directories
@@ -826,6 +887,15 @@ get_latest_package() {
         version=${version%"$suffix"}
         printf '%s\n' "$version"
     )
+    return 0
+}
+
+enable_options() {
+    [ -n "$1" ] || return 1
+    [ -n "$2" ] || return 1
+    local p n
+    $2 && p=enable || p=disable
+    for n in $1; do printf -- "--%s-%s " "$p" "$n"; done
     return 0
 }
 
@@ -963,7 +1033,7 @@ add_items_to_install_package()
     local timestamp_file="$1"
     local pkg_files=""
     for fmt in gz xz; do
-        local pkg_file="${PKG_ROOT}_${PKG_ROOT_VERSION}-${PKG_ROOT_RELEASE}_${PKG_TARGET_CPU}.tar.${fmt}"
+        local pkg_file="${PKG_ROOT}_${PKG_ROOT_VERSION}-${PKG_ROOT_RELEASE}_${PKG_TARGET_CPU}${PKG_TARGET_VARIANT}.tar.${fmt}"
         local pkg_path="${CACHED_DIR}/${pkg_file}"
         local temp_path=""
         local timestamp=""
@@ -1533,8 +1603,8 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed__libgcc" ]; then
 
     cd "${PKG_BUILD_SUBDIR}"
 
-    $MAKE all-target-libgcc STARTFILES_ONLY=1
-    make install-target-libgcc STARTFILES_ONLY=1
+    $MAKE all-target-libgcc
+    make install-target-libgcc
 
     touch "__package_installed__libgcc"
 fi
