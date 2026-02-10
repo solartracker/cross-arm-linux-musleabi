@@ -51,14 +51,12 @@ RELEASE_VERSION=0.2.1
 HOST_CPU="$(uname -m)"
 
 CROSSBUILD_DIR="${SCRIPT_DIR}-build"
-
-BUILD_START_PATH="${CROSSBUILD_DIR}/.build_start"
-VERSION_PATH="${CROSSBUILD_DIR}/VERSION"
+TARGET_DIR="${CROSSBUILD_DIR}/${TARGET}"
 
 export PREFIX="${CROSSBUILD_DIR}"
 export HOST=${TARGET}
-export SYSROOT="${PREFIX}/${TARGET}"
-export PATH="${PATH}:${PREFIX}/bin:${SYSROOT}/bin"
+export SYSROOT="${TARGET_DIR}/sysroot"
+export PATH="${PREFIX}/bin:${PATH}"
 
 CROSS_PREFIX=${TARGET}-
 
@@ -79,6 +77,9 @@ SRC_ROOT="${CROSSBUILD_DIR}/${SRC_DIR_NAME}/${TARGET}"
 
 MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
 #MAKE="make -j1"                                  # one job at a time
+
+BUILD_START_PATH="${CROSSBUILD_DIR}/.build_start"
+VERSION_PATH="${CROSSBUILD_DIR}/VERSION"
 
 STAGE_DIR_NAME="stage"
 STAGE="${PREFIX}/${STAGE_DIR_NAME}"
@@ -1415,8 +1416,9 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     unset PKG_CONFIG_PATH
 
     ../${PKG_SOURCE_SUBDIR}/configure \
-        --prefix="${PREFIX}" \
         --target=${TARGET} \
+        --prefix="${PREFIX}" \
+        --with-sysroot="${SYSROOT}" \
         --with-system-zlib \
         --with-zstd \
         --enable-compressed-debug-sections=ld \
@@ -1499,6 +1501,14 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed__gcc" ]; then
         --disable-libsanitizer \
         --disable-libstdcxx-pch \
         --disable-libgcov \
+        --disable-libstdcxx \
+        --disable-libitm \
+        --disable-libatomic \
+        --disable-libvtv \
+        --disable-bootstrap \
+        --disable-libcilkrts \
+        --disable-libada \
+        --disable-libquadmath-support \
     || handle_configure_error $?
 
     $MAKE all-gcc
@@ -1523,8 +1533,8 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed__libgcc" ]; then
 
     cd "${PKG_BUILD_SUBDIR}"
 
-    $MAKE all-target-libgcc
-    make install-target-libgcc
+    $MAKE all-target-libgcc STARTFILES_ONLY=1
+    make install-target-libgcc STARTFILES_ONLY=1
 
     touch "__package_installed__libgcc"
 fi
@@ -1565,10 +1575,10 @@ if [ ! -f "${PKG_BUILD_SUBDIR}/__package_installed" ]; then
     export CROSS_COMPILE=${CROSS_PREFIX}
 
     ../${PKG_SOURCE_SUBDIR}/configure \
-        --prefix="${SYSROOT}" \
         --target=${TARGET} \
+        --prefix="${SYSROOT}" \
+        --includedir="${SYSROOT}/usr/include" \
         --syslibdir=/lib \
-        --with-headers="${SYSROOT}/include" \
     || handle_configure_error $?
 
     $MAKE
