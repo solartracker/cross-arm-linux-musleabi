@@ -47,7 +47,6 @@ HOST_CPU="$(uname -m)"
 SYSROOT="${TARGET_DIR}/sysroot"
 export PREFIX="${SYSROOT}"
 export HOST=${TARGET}
-export PATH="${CROSSBUILD_DIR}/bin:${PATH}"
 
 CROSS_PREFIX=${TARGET}-
 export CC=${CROSS_PREFIX}gcc
@@ -75,7 +74,8 @@ case "${HOST_CPU}" in
 esac
 
 SRC_ROOT="${CROSSBUILD_DIR}/src/${PKG_ROOT}"
-PACKAGER_ROOT="${CROSSBUILD_DIR}/packager/${PKG_ROOT}/${PKG_ROOT}-${PKG_ROOT_VERSION}"
+PACKAGER_NAME="${PKG_ROOT}_${PKG_ROOT_VERSION}-${PKG_ROOT_RELEASE}_${PKG_TARGET_CPU}${PKG_TARGET_VARIANT}"
+PACKAGER_ROOT="${CROSSBUILD_DIR}/packager/${PKG_ROOT}/${PACKAGER_NAME}"
 
 MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
 #MAKE="make -j1"                                  # one job at a time
@@ -924,17 +924,21 @@ finalize_build() {
 
 # temporarily hide shared libraries (.so) to force cmake to use the static ones (.a)
 hide_shared_libraries() {
-    mv -f "${PREFIX}/lib_hidden/"* "${PREFIX}/lib/" || true
+    if [ -d "${PREFIX}/lib_hidden" ]; then
+        mv -f "${PREFIX}/lib_hidden/"* "${PREFIX}/lib/" || true
+        rmdir "${PREFIX}/lib_hidden" || true
+    fi
     mkdir -p "${PREFIX}/lib_hidden" || true
     mv -f "${PREFIX}/lib/"*".so"* "${PREFIX}/lib_hidden/" || true
-    mv -f "${PREFIX}/lib_hidden/libcc1."* "${PREFIX}/lib/" || true
     return 0
 }
 
 # restore the hidden shared libraries
 restore_shared_libraries() {
-    mv -f "${PREFIX}/lib_hidden/"* "${PREFIX}/lib/" || true
-    rmdir "${PREFIX}/lib_hidden" || true
+    if [ -d "${PREFIX}/lib_hidden" ]; then
+        mv -f "${PREFIX}/lib_hidden/"* "${PREFIX}/lib/" || true
+        rmdir "${PREFIX}/lib_hidden" || true
+    fi
     return 0
 }
 
@@ -943,14 +947,14 @@ add_items_to_install_package()
     [ -n "$1" ] || return 1
     [ -n "$PKG_ROOT" ]            || return 1
     [ -n "$PKG_ROOT_VERSION" ]    || return 1
-    [ -n "$PKG_ROOT_RELEASE" ]    || return 1
-    [ -n "$PKG_TARGET_CPU" ]      || return 1
+    [ -n "$PACKAGER_ROOT" ]       || return 1
+    [ -n "$PACKAGER_NAME" ]       || return 1
     [ -n "$CACHED_DIR" ]          || return 1
 
     local timestamp_file="$1"
     local pkg_files=""
     for fmt in gz xz; do
-        local pkg_file="${PKG_ROOT}_${PKG_ROOT_VERSION}-${PKG_ROOT_RELEASE}_${PKG_TARGET_CPU}${PKG_TARGET_VARIANT}.tar.${fmt}"
+        local pkg_file="${PACKAGER_NAME}.tar.${fmt}"
         local pkg_path="${CACHED_DIR}/${pkg_file}"
         local temp_path=""
         local timestamp=""
@@ -995,7 +999,7 @@ add_items_to_install_package()
     echo "[*] Finished creating the install package."
     echo ""
     echo "[*] Install package is here:"
-    echo "${pkg_files}"
+    echo -e "${pkg_files}"
     echo ""
 
     return 0
@@ -1075,7 +1079,11 @@ fi
 ) #END sub-shell
 } #END install_build_environment()
 
+
+################################################################################
 download_and_compile() {
+( #BEGIN sub-shell
+export PATH="${CROSSBUILD_DIR}/bin:${PATH}"
 mkdir -p "${SRC_ROOT}"
 
 ################################################################################
@@ -1554,6 +1562,7 @@ if [ ! -f "${PKG_SOURCE_SUBDIR}/__package_installed" ]; then
 fi
 )
 
+) #END sub-shell
 set +x
 echo ""
 echo "[*] Finished compiling ${PKG_ROOT} ${PKG_ROOT_VERSION}"

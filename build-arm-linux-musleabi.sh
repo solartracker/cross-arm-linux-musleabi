@@ -56,7 +56,6 @@ TARGET_DIR="${CROSSBUILD_DIR}/${TARGET}"
 export PREFIX="${CROSSBUILD_DIR}"
 export HOST=${TARGET}
 export SYSROOT="${TARGET_DIR}/sysroot"
-export PATH="${PREFIX}/bin:${PATH}"
 
 CROSS_PREFIX=${TARGET}-
 
@@ -145,6 +144,7 @@ install_dependencies() {
         "wget"
         "curl"
         "git"
+        "tar"
         "libgmp-dev"
         "libmpfr-dev"
         "libmpc-dev"
@@ -950,7 +950,7 @@ update_patch_library() {
 check_static() {
     ldd() {
         if ${ARCH_NATIVE}; then
-            "${SYSROOT}/lib/libc.so" --list "$@"
+            "${PREFIX}/lib/libc.so" --list "$@"
         else
             true
         fi
@@ -1004,17 +1004,21 @@ finalize_build() {
 
 # temporarily hide shared libraries (.so) to force cmake to use the static ones (.a)
 hide_shared_libraries() {
-    mv -f "${PREFIX}/lib_hidden/"* "${PREFIX}/lib/" || true
+    if [ -d "${PREFIX}/lib_hidden" ]; then
+        mv -f "${PREFIX}/lib_hidden/"* "${PREFIX}/lib/" || true
+        rmdir "${PREFIX}/lib_hidden" || true
+    fi
     mkdir -p "${PREFIX}/lib_hidden" || true
     mv -f "${PREFIX}/lib/"*".so"* "${PREFIX}/lib_hidden/" || true
-    mv -f "${PREFIX}/lib_hidden/libcc1."* "${PREFIX}/lib/" || true
     return 0
 }
 
 # restore the hidden shared libraries
 restore_shared_libraries() {
-    mv -f "${PREFIX}/lib_hidden/"* "${PREFIX}/lib/" || true
-    rmdir "${PREFIX}/lib_hidden" || true
+    if [ -d "${PREFIX}/lib_hidden" ]; then
+        mv -f "${PREFIX}/lib_hidden/"* "${PREFIX}/lib/" || true
+        rmdir "${PREFIX}/lib_hidden" || true
+    fi
     return 0
 }
 
@@ -1023,14 +1027,14 @@ add_items_to_install_package()
     [ -n "$1" ] || return 1
     [ -n "$PKG_ROOT" ]            || return 1
     [ -n "$PKG_ROOT_VERSION" ]    || return 1
-    [ -n "$PKG_ROOT_RELEASE" ]    || return 1
-    [ -n "$PKG_TARGET_CPU" ]      || return 1
+    [ -n "$PACKAGER_ROOT" ]       || return 1
+    [ -n "$PACKAGER_NAME" ]       || return 1
     [ -n "$CACHED_DIR" ]          || return 1
 
     local timestamp_file="$1"
     local pkg_files=""
     for fmt in gz xz; do
-        local pkg_file="${PKG_ROOT}_${PKG_ROOT_VERSION}-${PKG_ROOT_RELEASE}_${PKG_TARGET_CPU}${PKG_TARGET_VARIANT}.tar.${fmt}"
+        local pkg_file="${PACKAGER_NAME}.tar.${fmt}"
         local pkg_path="${CACHED_DIR}/${pkg_file}"
         local temp_path=""
         local timestamp=""
@@ -1075,7 +1079,7 @@ add_items_to_install_package()
     echo "[*] Finished creating the install package."
     echo ""
     echo "[*] Install package is here:"
-    echo "${pkg_files}"
+    echo -e "${pkg_files}"
     echo ""
 
     return 0
@@ -1248,7 +1252,10 @@ archive_build_directory()
 ) # END sub-shell
 
 
+################################################################################
 download_and_compile() {
+( #BEGIN sub-shell
+export PATH="${CROSSBUILD_DIR}/bin:${PATH}"
 mkdir -p "${SRC_ROOT}"
 mkdir -p "${CROSSBUILD_DIR}"
 mkdir -p "${STAGE}"
@@ -1755,6 +1762,7 @@ fi
 #
 on_build_finished
 
+) #END sub-shell
 set +x
 echo ""
 echo "[*] Finished compiling."
