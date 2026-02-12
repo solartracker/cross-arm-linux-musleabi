@@ -999,7 +999,7 @@ add_items_to_install_package()
     echo "[*] Finished creating the install package."
     echo ""
     echo "[*] Install package is here:"
-    echo -e "${pkg_files}"
+    printf '%b\n' "${pkg_files}"
     echo ""
 
     return 0
