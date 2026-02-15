@@ -50,7 +50,9 @@ export HOST=${TARGET}
 
 CROSS_PREFIX=${TARGET}-
 export CC=${CROSS_PREFIX}gcc
+export CXX=${CROSS_PREFIX}g++
 export AR=${CROSS_PREFIX}ar
+export LD=${CROSS_PREFIX}ld
 export RANLIB=${CROSS_PREFIX}ranlib
 export OBJCOPY=${CROSS_PREFIX}objcopy
 export STRIP=${CROSS_PREFIX}strip
@@ -75,8 +77,10 @@ case "${HOST_CPU}" in
 esac
 
 SRC_ROOT="${CROSSBUILD_DIR}/src/${PKG_ROOT}"
+STAGE_DIR="${CROSSBUILD_DIR}/stage/${PKG_ROOT}"
 PACKAGER_NAME="${PKG_ROOT}_${PKG_ROOT_VERSION}-${PKG_ROOT_RELEASE}_${PKG_TARGET_CPU}${PKG_TARGET_VARIANT}"
 PACKAGER_ROOT="${CROSSBUILD_DIR}/packager/${PKG_ROOT}/${PACKAGER_NAME}"
+PACKAGER_TOPDIR="${PACKAGER_ROOT}/${PKG_ROOT}-${PKG_ROOT_VERSION}"
 
 MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
 #MAKE="make -j1"                                  # one job at a time
@@ -86,8 +90,6 @@ export PKG_CONFIG_LIBDIR="${PREFIX}/lib/pkgconfig"
 unset PKG_CONFIG_PATH
 
 install_build_environment
-
-#create_cmake_toolchain_file
 
 download_and_compile
 
@@ -102,12 +104,12 @@ return 0
 create_install_package() {
 
 rm -rf "${PACKAGER_ROOT}"
-mkdir -p "${PACKAGER_ROOT}/bin"
-mkdir -p "${PACKAGER_ROOT}/lib"
-cp -p "${SCRIPT_DIR}/files/gdb/gdb-17.1/solartracker/gdb.sh" "${PACKAGER_ROOT}/"
-cp -p "${PREFIX}/bin/gdb" "${PACKAGER_ROOT}/bin/"
-cp -p "${PREFIX}/bin/gdbserver" "${PACKAGER_ROOT}/bin/"
-cp -p "${PREFIX}/lib/libc.so" "${PACKAGER_ROOT}/lib/"
+mkdir -p "${PACKAGER_TOPDIR}/bin"
+mkdir -p "${PACKAGER_TOPDIR}/lib"
+cp -p "${SCRIPT_DIR}/files/gdb/gdb-17.1/solartracker/gdb.sh" "${PACKAGER_TOPDIR}/"
+cp -p "${PREFIX}/bin/gdb" "${PACKAGER_TOPDIR}/bin/"
+cp -p "${PREFIX}/bin/gdbserver" "${PACKAGER_TOPDIR}/bin/"
+cp -p "${PREFIX}/lib/libc.so" "${PACKAGER_TOPDIR}/lib/"
 add_items_to_install_package "${PREFIX}/bin/gdb"
 
 return 0
@@ -165,19 +167,26 @@ return 0
 
 # If autoconf/configure fails due to missing libraries or undefined symbols, you
 # immediately see all undefined references without having to manually search config.log
-handle_configure_error() {
+handle_configure_error()
+( # BEGIN sub-shell
+    set +x
     local rc=$1
+    local config_log_file="$2"
+
+    if [ -z "${config_log_file}" ] || [ ! -f "${config_log_file}" ]; then
+        config_log_file="config.log"
+    fi
 
     #grep -R --include="config.log" --color=always "undefined reference" .
     #find . -name "config.log" -exec grep -H "undefined reference" {} \;
-    #find . -name "config.log" -exec grep -H -E "undefined reference|can't load library|unrecognized command-line option|No such file or directory" {} \;
-    find . -name "config.log" -exec grep -H -E "undefined reference|can't load library|unrecognized command-line option" {} \;
+    find . -name "config.log" -exec grep -H -E "undefined reference|can't load library|unrecognized command-line option|No such file or directory" {} \;
+    #find . -name "config.log" -exec grep -H -E "undefined reference|can't load library|unrecognized command-line option" {} \;
 
     # Force failure if rc is zero, since error was detected
     [ "${rc}" -eq 0 ] && return 1
 
     return ${rc}
-}
+) # END sub-shell
 
 ################################################################################
 # Package management
@@ -818,12 +827,16 @@ enable_options() {
 }
 
 contains() {
-    haystack=$1
-    needle=$2
+    case "$1" in
+        *"$2"*) return 0 ;;
+        *)      return 1 ;;
+    esac
+}
 
-    case $haystack in
-        *"$needle"*) return 0 ;;
-        *)           return 1 ;;
+ends_with() {
+    case "$1" in
+        *"$2") return 0 ;;
+        *)     return 1 ;;
     esac
 }
 
@@ -978,7 +991,6 @@ add_items_to_install_package()
         timestamp="@$(stat -c %Y "${timestamp_file}")"
         cd "${PACKAGER_ROOT}" || return 1
         if ! tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" \
-                --transform "s|^|${PKG_ROOT}-${PKG_ROOT_VERSION}/|" \
                 -C "${PACKAGER_ROOT}" * \
                 -cv | ${compressor} >"${temp_path}"; then
             return 1
@@ -1086,6 +1098,7 @@ download_and_compile() {
 ( #BEGIN sub-shell
 export PATH="${CROSSBUILD_DIR}/bin:${PATH}"
 mkdir -p "${SRC_ROOT}"
+#mkdir -p "${STAGE_DIR}"
 
 ################################################################################
 # zlib-1.3.1
