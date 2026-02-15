@@ -82,8 +82,6 @@ MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
 
 check_dependencies
 
-#create_cmake_toolchain_file
-
 download_and_compile
 
 archive_and_configuration
@@ -94,13 +92,12 @@ return 0
 ################################################################################
 # Host dependencies
 #
-check_dependencies() {
-set +x
-install_dependencies
-set -x
-
-return 0
-} #END check_dependencies()
+check_dependencies()
+( # BEGIN sub-shell
+    set +x
+    install_dependencies || return 1
+    return 0
+) # END sub-shell
 
 prompt_install_choice() {
     echo
@@ -244,19 +241,26 @@ return 0
 
 # If autoconf/configure fails due to missing libraries or undefined symbols, you
 # immediately see all undefined references without having to manually search config.log
-handle_configure_error() {
+handle_configure_error()
+( # BEGIN sub-shell
+    set +x
     local rc=$1
+    local config_log_file="$2"
+
+    if [ -z "${config_log_file}" ] || [ ! -f "${config_log_file}" ]; then
+        config_log_file="config.log"
+    fi
 
     #grep -R --include="config.log" --color=always "undefined reference" .
     #find . -name "config.log" -exec grep -H "undefined reference" {} \;
-    #find . -name "config.log" -exec grep -H -E "undefined reference|can't load library|unrecognized command-line option|No such file or directory" {} \;
-    find . -name "config.log" -exec grep -H -E "undefined reference|can't load library|unrecognized command-line option" {} \;
+    find . -name "config.log" -exec grep -H -E "undefined reference|can't load library|unrecognized command-line option|No such file or directory" {} \;
+    #find . -name "config.log" -exec grep -H -E "undefined reference|can't load library|unrecognized command-line option" {} \;
 
     # Force failure if rc is zero, since error was detected
     [ "${rc}" -eq 0 ] && return 1
 
     return ${rc}
-}
+) # END sub-shell
 
 ################################################################################
 # Package management
@@ -897,12 +901,16 @@ enable_options() {
 }
 
 contains() {
-    haystack=$1
-    needle=$2
+    case "$1" in
+        *"$2"*) return 0 ;;
+        *)      return 1 ;;
+    esac
+}
 
-    case $haystack in
-        *"$needle"*) return 0 ;;
-        *)           return 1 ;;
+ends_with() {
+    case "$1" in
+        *"$2") return 0 ;;
+        *)     return 1 ;;
     esac
 }
 
@@ -1057,7 +1065,6 @@ add_items_to_install_package()
         timestamp="@$(stat -c %Y "${timestamp_file}")"
         cd "${PACKAGER_ROOT}" || return 1
         if ! tar --numeric-owner --owner=0 --group=0 --sort=name --mtime="${timestamp}" \
-                --transform "s|^|${PKG_ROOT}-${PKG_ROOT_VERSION}/|" \
                 -C "${PACKAGER_ROOT}" * \
                 -cv | ${compressor} >"${temp_path}"; then
             return 1
