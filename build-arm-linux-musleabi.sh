@@ -168,7 +168,7 @@ install_dependencies() {
                 echo "[*] $pkg is installed."
             fi
         else
-            echo "[*] $pkg not installed."
+            echo "[*] $pkg is missing."
             to_install+=("$pkg")
         fi
     done
