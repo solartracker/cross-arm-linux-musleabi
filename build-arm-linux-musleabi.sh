@@ -82,6 +82,8 @@ MAKE="make -j$(grep -c ^processor /proc/cpuinfo)" # parallelism
 
 check_dependencies
 
+#create_cmake_toolchain_file
+
 download_and_compile
 
 archive_and_configuration
@@ -253,8 +255,8 @@ handle_configure_error()
 
     #grep -R --include="config.log" --color=always "undefined reference" .
     #find . -name "config.log" -exec grep -H "undefined reference" {} \;
-    find . -name "config.log" -exec grep -H -E "undefined reference|can't load library|unrecognized command-line option|No such file or directory" {} \;
-    #find . -name "config.log" -exec grep -H -E "undefined reference|can't load library|unrecognized command-line option" {} \;
+    #find . -name "config.log" -exec grep -H -E "undefined reference|can't load library|unrecognized command-line option|No such file or directory" {} \;
+    find . -name "config.log" -exec grep -H -E "undefined reference|can't load library|unrecognized command-line option" {} \;
 
     # Force failure if rc is zero, since error was detected
     [ "${rc}" -eq 0 ] && return 1
